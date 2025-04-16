@@ -1,65 +1,77 @@
-helpContent <- function(){
-  importmenu <- "<body>
+helpContent <- function() {
+  importmenu <- "
+  <body>
 
-      <h3><strong>Importing Data in TALL</strong></strong></h3>
+  <h3><strong>Importing Data in TALL</strong></h3>
 
-      <p>TALL provides a versatile and user-friendly interface for importing textual data from various sources, ensuring flexibility in data handling for diverse analytical needs. The platform supports multiple file formats and structures, allowing users to seamlessly prepare their datasets for analysis.</p>
-      <hr>
-      <h4><strong>Supported File Formats</strong></strong></h4>
+  <p>TALL provides a versatile and user-friendly interface for importing textual data from various sources, ensuring flexibility in data handling for diverse analytical needs. The platform supports multiple file formats and structures, allowing users to seamlessly prepare their datasets for analysis.</p>
+  <hr>
 
-      <h4>1. Plain Text Files (.txt)</h4>
-      <p>Plain text files can be imported in three different ways, depending on the structure of the data:</p>
-      <ul>
-      <li><strong>Single file containing a single document:</strong> Ideal for analyzing an individual document, such as a speech transcript, literary work, or report.</li>
-      <li><strong>Single file with multiple documents separated by alphanumeric codes</strong> (e.g., 'Chapter', '0001', '****'):
-      <ul>
-      <li>TALL automatically detects these separators, enabling structured document segmentation.</li>
-      <li>Users can further refine the segmentation using the <strong>Edit → Split</strong> menu.</li>
-      </ul>
-      </li>
-      <li><strong>Multiple .txt files, where each file represents a separate document:</strong>
-      <ul>
-      <li>Users can either select individual files manually or import a compressed (.zip) folder containing multiple text files.</li>
-      <li>Each document will be automatically assigned an ID based on its file name, ensuring clear organization.</li>
-      </ul>
-      </li>
-      </ul>
+  <h4><strong>Supported File Formats</strong></h4>
 
-      <h4>2. Tabular Data (.csv, .xlsx)</h4>
-      <p>Tabular formats are useful for structured datasets, such as online reviews, survey responses, or social media posts.</p>
+  <h4>1. Plain Text Files (.txt)</h4>
+  <p>Plain text files can be imported in three different ways, depending on the structure of the data:</p>
+  <ul>
+    <li><strong>Single file containing a single document:</strong> Ideal for analyzing an individual document, such as a speech transcript, literary work, or report.</li>
+    <li><strong>Single file with multiple documents separated by alphanumeric codes</strong> (e.g., 'Chapter', '0001', '****'):
       <ul>
-      <li>The text to be analyzed must be stored in a dedicated column named <strong>'text'</strong> to ensure proper identification.</li>
-      <li>Each row in the dataset is treated as an individual document.</li>
-      <li>Additional metadata (e.g., timestamps, user IDs, categories) can be retained for contextual analysis.</li>
+        <li>TALL automatically detects these separators, enabling structured document segmentation.</li>
+        <li>Users can further refine the segmentation using the <strong>Edit → Split</strong> menu.</li>
       </ul>
+    </li>
+    <li><strong>Multiple .txt files, where each file represents a separate document:</strong>
+      <ul>
+        <li>Users can either select individual files manually or import a compressed (.zip) folder containing multiple text files.</li>
+        <li>Each document will be automatically assigned an ID based on its file name, ensuring clear organization.</li>
+      </ul>
+    </li>
+  </ul>
 
-      <h4>3. PDF Documents (.pdf)</h4>
-      <p>TALL supports the import of PDF files, facilitating the analysis of academic papers, reports, books, and other document types.</p>
-      <ul>
-      <li>Text extraction occurs automatically, converting the content into a format suitable for processing.</li>
-      <li><strong>Limitation:</strong> At the moment, TALL can only import and process PDFs that follow a single-column formatting. PDFs with multi-column layouts, footnotes, or complex page structures may not be correctly parsed, and additional preprocessing may be required.</li>
-      </ul>
-      <hr>
-      <h4><strong>TALL Structured Files (.tall)</strong></strong></h4>
-      <p>TALL allows users to save their analysis progress in a structured format, ensuring continuity across sessions.</p>
-      <ul>
-      <li><strong>Save Progress:</strong> Users can export their current session as a <strong>.tall</strong> file, preserving all imported data, configurations, and analytical steps.</li>
-      <li><strong>Load Saved Sessions:</strong> Previously saved <strong>.tall</strong> files can be reloaded, allowing users to resume their work seamlessly without the need to re-import or preprocess data.</li>
-      </ul>
+  <h4>2. Tabular Data (.csv, .xlsx)</h4>
+  <p>Tabular formats are useful for structured datasets, such as online reviews, survey responses, or social media posts.</p>
+  <ul>
+    <li>The text to be analyzed must be stored in a dedicated column named <strong>'text'</strong> to ensure proper identification.</li>
+    <li>Each row in the dataset is treated as an individual document.</li>
+    <li>Additional metadata (e.g., timestamps, user IDs, categories) can be retained for contextual analysis.</li>
+  </ul>
 
-      <p>By offering flexible and structured data import capabilities, TALL streamlines the initial steps of text analysis, enabling users to focus on extracting insights efficiently.</p>
-      <hr>
-      <div class='references'>
-        <h4><strong>References</strong></strong></h4>
-        <p><strong>Aria, M., Cuccurullo, C., D’Aniello, L., Misuraca, M., & Spano, M. (2024).</strong> <i>Breaking Barriers with TALL: A Text Analysis Shiny app for ALL</i>. In A. Dister, D. Longrée (eds.), <i>Mots competes textes déchiffrés (JADT24)</i> Presses Universitaires De Louvain Vol.1 pp.39-48.</p>
-        <p><strong>Aria, M., Cuccurullo, C., D’Aniello, L., Misuraca, M., & Spano, M. (2024).</strong> <i>TALL: A New Shiny App for Text Analysis</i>. In <i>Scientific Meeting of the Italian Statistical Society</i> (pp. 64-70). Cham: Springer Nature Switzerland.</p>
-        <p><strong>Aria, M., Cuccurullo, C., D'Aniello, L., Misuraca, M., & Spano, M. (2023).</strong> <i>TALL: A New Shiny App of Text Analysis for All</i>. In <i>CLiC-it</i>.</p>
-    </div>
+  <h4>3. PDF Documents (.pdf)</h4>
+  <p>TALL supports the import of PDF files, facilitating the analysis of academic papers, reports, books, and other document types.</p>
+  <ul>
+    <li>Text extraction occurs automatically, converting the content into a format suitable for processing.</li>
+    <li><strong>Limitation:</strong> At the moment, TALL can only import and process PDFs that follow a single-column formatting. PDFs with multi-column layouts, footnotes, or complex page structures may not be correctly parsed, and additional preprocessing may be required.</li>
+  </ul>
+
+  <h4>4. Biblioshiny Export Files</h4>
+  <p>TALL supports the import of files exported from <strong>Biblioshiny</strong>, the graphical user interface of the <strong>Bibliometrix</strong> R package. This feature allows users to directly analyze the textual content of bibliographic metadata extracted from bibliometric databases such as Scopus or Web of Science.</p>
+  <ul>
+    <li>The exported file (typically in <strong>.csv</strong> format) can be loaded into TALL.</li>
+    <li>Users must specify which column (e.g., <strong>Abstract</strong>, <strong>Keywords</strong>, or <strong>Title</strong>) should be used as the main textual content for analysis.</li>
+    <li>Other fields (e.g., authors, year, journal) can be imported and used as metadata for document grouping or filtering.</li>
+  </ul>
+
+  <hr>
+  <h4><strong>TALL Structured Files (.tall)</strong></h4>
+  <p>TALL allows users to save their analysis progress in a structured format, ensuring continuity across sessions.</p>
+  <ul>
+    <li><strong>Save Progress:</strong> Users can export their current session as a <strong>.tall</strong> file, preserving all imported data, configurations, and analytical steps.</li>
+    <li><strong>Load Saved Sessions:</strong> Previously saved <strong>.tall</strong> files can be reloaded, allowing users to resume their work seamlessly without the need to re-import or preprocess data.</li>
+  </ul>
+
+  <p>By offering flexible and structured data import capabilities, TALL streamlines the initial steps of text analysis, enabling users to focus on extracting insights efficiently.</p>
+  <hr>
+
+  <div class='references'>
+    <h4><strong>References</strong></h4>
+    <p><strong>Aria, M., Cuccurullo, C., D’Aniello, L., Misuraca, M., & Spano, M. (2024).</strong> <i>Breaking Barriers with TALL: A Text Analysis Shiny app for ALL</i>. In A. Dister, D. Longrée (eds.), <i>Mots competes textes déchiffrés (JADT24)</i> Presses Universitaires De Louvain Vol.1 pp.39-48.</p>
+    <p><strong>Aria, M., Cuccurullo, C., D’Aniello, L., Misuraca, M., & Spano, M. (2024).</strong> <i>TALL: A New Shiny App for Text Analysis</i>. In <i>Scientific Meeting of the Italian Statistical Society</i> (pp. 64-70). Cham: Springer Nature Switzerland.</p>
+    <p><strong>Aria, M., Cuccurullo, C., D'Aniello, L., Misuraca, M., & Spano, M. (2023).</strong> <i>TALL: A New Shiny App of Text Analysis for All</i>. In <i>CLiC-it</i>.</p>
+  </div>
 
 </body>
 "
 
-  split <-  "<body>
+  split <- "<body>
 
     <h3><strong>Splitting the Corpus in TALL</strong></strong></h3>
 
@@ -392,11 +404,11 @@ helpContent <- function(){
 
 </body>"
 
-overview <- "<body>
+  overview <- "<body>
   <div class='container'>
     <h3><strong>Corpus Metrics in TALL</strong></h3>
     <p>These metrics provide a summary of the key textual characteristics of the analyzed corpus.</p>
-    
+
     <h4><strong>📂 Corpus Size & Structure</strong></h4>
     <ul>
     <li><strong>Documents →</strong> The total number of documents in the corpus.</li>
@@ -405,7 +417,7 @@ overview <- "<body>
     <li><strong>Types →</strong> The number of unique words in the corpus, representing vocabulary richness.</li>
     <li><strong>Lemma →</strong> The number of unique lemmas, considering the base form of words.</li>
     </ul>
-    
+
     <h4><strong>📏 Average Length Metrics</strong></h4>
     <ul>
     <li><strong>Doc Avg Length in Chars →</strong> The average number of characters per document.<br>
@@ -449,7 +461,7 @@ overview <- "<body>
             </math>
             </li>
             </ul>
-            
+
             <h4><strong>📊 Lexical Metrics</strong></h4>
             <ul>
             <li><strong>Type-Token Ratio (TTR) →</strong> Ratio of unique words (types) to total words (tokens). Higher values indicate greater lexical diversity.<br>
@@ -463,7 +475,7 @@ overview <- "<body>
                 </mrow>
                 </math>
                 </li>
-                
+
                 <li><strong>Hapax Legomena (%) →</strong> Percentage of words that appear only once in the corpus.<br>
                 <math xmlns='http://www.w3.org/1998/Math/MathML' style='font-size: 1.5em; display: block; text-align: center; margin-top: 4px; margin-bottom: 12px;'>
                   <mrow>
@@ -477,7 +489,7 @@ overview <- "<body>
                     </mrow>
                     </math>
                     </li>
-                    
+
                     <li><strong>Guiraud Index →</strong> Measure of lexical richness correcting for text length.<br>
                     <math xmlns='http://www.w3.org/1998/Math/MathML' style='font-size: 1.5em; display: block; text-align: center; margin-top: 4px; margin-bottom: 12px;'>
                       <mrow>
@@ -492,7 +504,7 @@ overview <- "<body>
                         </math>
                         </li>
                         </ul>
-                        
+
                         <h4><strong>📊 Additional Lexical Measures</strong></h4>
                         <ul>
                         <li><strong>Lexical Density →</strong> Proportion of content words over total tokens.<br>
@@ -506,7 +518,7 @@ overview <- "<body>
                             </mrow>
                             </math>
                             </li>
-                            
+
                             <li><strong>Nominal Ratio →</strong> Ratio between nouns and verbs.<br>
                             <math xmlns='http://www.w3.org/1998/Math/MathML' style='font-size: 1.5em; display: block; text-align: center; margin-top: 4px; margin-bottom: 12px;'>
                               <mrow>
@@ -518,9 +530,9 @@ overview <- "<body>
                                 </mrow>
                                 </math>
                                 </li>
-                                
+
                                 <li><strong>Gini Index →</strong> Measure of inequality in word frequency distribution. Calculated from the Lorenz curve of word frequencies.</li>
-                                
+
                                 <li><strong>Yule’s K Index →</strong> Measure of lexical diversity based on word repetition.<br>
                                 <math xmlns='http://www.w3.org/1998/Math/MathML' style='font-size: 1.5em; display: block; text-align: center; margin-top: 4px; margin-bottom: 12px;'>
                                   <mrow>
@@ -546,7 +558,7 @@ overview <- "<body>
                                     </math>
                                     </li>
                                     </ul>
-                                    
+
                                     <div class='references'>
                                       <h4><strong>References</strong></h4>
                                       <p><strong>Baayen, R. H.</strong> <i>The effect of lexical specialization on the growth curve of vocabulary.</i> <strong>Computational Linguistics</strong>, 22(2), 1996.</p>
@@ -560,7 +572,7 @@ overview <- "<body>
                                       </div>
                                       </body>"
 
-wordincontext <- "<body>
+  wordincontext <- "<body>
 
     <h3><strong>Words in Context in TALL</strong></h3>
 
@@ -826,67 +838,267 @@ wordincontext <- "<body>
 
               </body>"
 
+  thematicmap <- "
+  <body>
+
+  <h3><strong>Thematic Map</strong></h3>
+
+  <p>
+  The <strong>Thematic Map</strong> feature in TALL enables users to explore the conceptual structure of a text corpus by visually mapping the most relevant topics. It is based on an unsupervised, network-based method designed to extract, cluster, and characterize groups of words representing distinct semantic areas within the analyzed texts. This approach has been successfully applied in bibliometric research and adapted in TALL for general-purpose text analysis.
+</p>
+
+  <hr>
+
+  <h4><strong>Methodological Framework</strong></h4>
+
+  <p>
+  Thematic mapping starts with the construction of a <strong>co-occurrence matrix</strong> from the pre-processed text corpus. The association strength between terms is then calculated to normalize the raw co-occurrence frequencies:
+  </p>
+
+  <math xmlns=,http://www.w3.org/1998/Math/MathML, style=,font-size: 1.1em; display: block; text-align: center; margin: 10px 0;,>
+    <mrow>
+    <mtext>AS</mtext><msub><mi>jj'</mi></msub><mo>=</mo>
+      <mfrac>
+        <msub><mi>a</mi><mi>jj'</mi></msub>
+    <mrow>
+    <msub><mi>a</mi><mi>jj</mi></msub><mo>&#x22C5;</mo><msub><mi>a</mi><mi>j'j'</mi></msub>
+    </mrow>
+    </mfrac>
+    </mrow>
+    </math>
+
+    <p>
+    where <em>AS<sub>jj'</sub></em> is the association strength between terms <em>j</em> and <em>j'</em>, and <em>a<sub>jj'</sub></em> is their observed co-occurrence. This metric expresses the semantic relatedness of term pairs.
+  </p>
+
+  <p>
+    A <strong>community detection algorithm</strong> (WalkTrap) is then applied to the normalized network to identify clusters of terms (i.e., topics). Each cluster is projected onto a two-dimensional plane using two dimensions:
+  </p>
+
+  <ul>
+    <li><strong>Callon Centrality (CC):</strong> measures a topic’s interaction with others, indicating its <em>relevance</em> in the corpus.</li>
+    <li><strong>Callon Density (CD):</strong> measures the internal cohesion of the topic, reflecting its <em>development</em>.</li>
+  </ul>
+
+  <p>Each topic is placed on a <strong>strategic diagram</strong> based on its centrality and density values:</p>
+
+  <ul>
+    <li><strong>Upper-right (Hot Topics):</strong> High centrality and high density – well-developed and important.</li>
+    <li><strong>Lower-right (Basic Topics):</strong> High centrality and low density – important but still under development.</li>
+    <li><strong>Upper-left (Niche Topics):</strong> Low centrality and high density – well developed but marginal.</li>
+    <li><strong>Lower-left (Peripheral Topics):</strong> Low centrality and low density – weakly developed and marginal.</li>
+  </ul>
+
+  <hr>
+
+  <h4><strong>Features in TALL</strong></h4>
+
+  <ul>
+    <li>Users can generate thematic maps from any textual dataset preprocessed and tokenized in TALL.</li>
+    <li>The algorithm works automatically and does <strong>not require setting the number of topics</strong> in advance.</li>
+    <li>Topics are labeled by the most frequent keywords within each cluster.</li>
+    <li>Topic size (i.e., the size of the bubble) represents the number of terms in the cluster.</li>
+    <li>The user can select specific time slices or metadata filters to perform <strong>comparative thematic analysis</strong> across groups or periods.</li>
+  </ul>
+
+  <p>
+    Thematic maps offer a rich, interpretable representation of discourse structure and are particularly effective for exploratory text mining and culturomic studies.
+  </p>
+
+  <hr>
+
+  <div class='references'>
+    <h4><strong>References</strong></h4>
+    <p><strong>Aria, M., Cuccurullo, C., D’Aniello, L., Misuraca, M., & Spano, M. (2022).</strong> <i>Thematic Analysis as a New Culturomic Tool: The Social Media Coverage on COVID-19 Pandemic in Italy.</i> <strong>Sustainability</strong>, 14(6), 3643. https://doi.org/10.3390/su14063643</p>
+    <p><strong>Cobo, M.J., López-Herrera, A.G., Herrera-Viedma, E., & Herrera, F. (2011).</strong> <i>An approach for detecting, quantifying, and visualising the evolution of a research field: A practical application to the fuzzy sets theory field.</i> <strong>Journal of Informetrics</strong>, 5(1), 146–166.</p>
+  </div>
+
+</body>
+
+  "
+
+  embeddingtrain<- "
+
+    <body>
+    <h3><strong>Training Word Embeddings in TALL</strong></h3>
+    <p>
+    The <strong>Training</strong> module in TALL enables users to generate <strong>custom word embeddings</strong> from their own corpus using the <strong>word2vec algorithm</strong>,
+  which includes both the <strong>Continuous Bag-of-Words (CBOW)</strong> and <strong>Skip-gram</strong> architectures.
+  These models create dense vector representations that capture semantic and syntactic relationships among words based on their distributional context.
+  </p>
+
+    <hr>
+    <h4><strong>Available Architectures</strong></h4>
+    <ul>
+    <li><strong>CBOW:</strong> Predicts a word from its surrounding context. It is faster and works well with frequent words.</li>
+    <li><strong>Skip-gram:</strong> Predicts surrounding context words from a target word. It is slower but performs better with infrequent words.</li>
+    </ul>
+
+    <hr>
+    <h4><strong>How It Works</strong></h4>
+    <ul>
+    <li>Text data is lemmatized and filtered to exclude non-informative tokens (e.g., punctuation, auxiliaries, determiners).</li>
+    <li>Training is performed at the sentence level to preserve local context.</li>
+    <li>Stopwords are automatically identified and excluded.</li>
+    <li>Parameters such as <code>dimensionality</code>, <code>number of iterations</code>, and <code>architecture (CBOW/Skip-gram)</code> can be configured.</li>
+    </ul>
+
+    <hr>
+    <h4><strong>Outputs</strong></h4>
+    <ul>
+    <li>Word embedding matrix.</li>
+    <li>Descriptive statistics for each vector dimension (mean, SD, skewness, kurtosis).</li>
+    <li>PCA analysis to evaluate variance explained by each component.</li>
+    <li>Cosine similarity and Euclidean distance metrics for quality assessment.</li>
+    </ul>
+
+    <hr>
+    <h4><strong>Example</strong></h4>
+    <p>
+    Training a word2vec model on a corpus of product reviews may reveal that terms like <code>“delivery”</code> and <code>“shipping”</code> appear close in vector space,
+  indicating their semantic similarity within that context.
+  </p>
+
+    <hr>
+    <h4><strong>References</strong></h4>
+    <ul>
+    <li>
+    Mikolov, T., Chen, K., Corrado, G., & Dean, J. (2013).
+  <i>Efficient Estimation of Word Representations in Vector Space</i>.
+  <a href='https://arxiv.org/abs/1301.3781' target='_blank'>arXiv:1301.3781</a>
+    </li>
+    <li>
+    Mikolov, T., Sutskever, I., Chen, K., Corrado, G., & Dean, J. (2013).
+  <i>Distributed Representations of Words and Phrases and their Compositionality</i>.
+  <a href='https://arxiv.org/abs/1310.4546' target='_blank'>arXiv:1310.4546</a>
+    </li>
+    </ul>
+    </body>
+  "
+
+  embeddingsimilarity<- "<body>
+    <h3><strong>Word Similarity Network in TALL</strong></h3>
+    <p>
+    The <strong>Similarity</strong> module in TALL allows users to explore semantic relationships between words through an interactive <strong>similarity network</strong> generated from word embeddings trained in the <strong>Training</strong> tab. These embeddings are built using the <strong>word2vec</strong> algorithm (either CBOW or Skip-gram).
+  </p>
+
+    <hr>
+    <h4><strong>How It Works</strong></h4>
+    <ul>
+    <li>
+    TALL selects the <strong>top 100 most frequent content words</strong> in the corpus (restricted to POS: NOUN, PROPN, ADJ).
+  </li>
+    <li>
+    For each of these 100 terms, the system computes the <strong>10 most similar words</strong> based on <strong>cosine similarity</strong> in the embedding space.
+  </li>
+    <li>
+    The resulting network is composed of:
+    <ul>
+    <li><strong>Nodes:</strong> the 100 target words (triangles) and their similar terms (dots).</li>
+    <li><strong>Edges:</strong> connections representing semantic similarity scores (cosine similarity ≥ 0.5), with width proportional to similarity.</li>
+    </ul>
+    </li>
+    <li>
+    The network also undergoes <strong>community detection</strong> using the Walktrap algorithm to highlight thematic clusters.
+  </li>
+    </ul>
+
+    <hr>
+    <h4><strong>Visualization Tools</strong></h4>
+    <ul>
+    <li><strong>UMAP projection:</strong> two-dimensional semantic mapping of all words in the embedding matrix.</li>
+    <li><strong>Overlap reduction:</strong> improves readability by adjusting label positions and opacity in dense areas.</li>
+    <li><strong>Interactive display:</strong> with zoom, node highlighting, and draggable layout via <code>visNetwork</code>.</li>
+    </ul>
+
+    <hr>
+    <h4><strong>Example</strong></h4>
+    <p>
+    After training on a corpus of scientific publications, the similarity network might display <code>“method”</code>, <code>“approach”</code>, and <code>“model”</code> as top frequent terms, each connected to semantically related concepts such as <code>“algorithm”</code>, <code>“technique”</code>, or <code>“framework”</code>.
+  </p>
+
+    <hr>
+<h4><strong>References</strong></h4>
+<ul>
+  <li>
+    Mikolov, T., Sutskever, I., Chen, K., Corrado, G. S., & Dean, J. (2013).
+    <i>Distributed Representations of Words and Phrases and their Compositionality.</i>
+    In *Advances in Neural Information Processing Systems* (NeurIPS 2013), 26, 3111–3119.
+    <a href='https://papers.nips.cc/paper_files/paper/2013/file/9aa42b31882ec039965f3c4923ce901b-Paper.pdf' target='_blank'>
+      [View PDF]
+    </a>
+  </li>
+  <li>
+    Mikolov, T., Chen, K., Corrado, G., & Dean, J. (2013).
+    <i>Efficient Estimation of Word Representations in Vector Space.</i>
+    <a href='https://arxiv.org/abs/1301.3781' target='_blank'>arXiv:1301.3781</a>
+  </li>
+</ul>
+    </body>
+
+    "
+
   tmkchoice <- "<body>
 
-    <h3><strong>Topic Modeling in TALL: K Selection</strong></strong></h3>
+  <h3><strong>Topic Modeling in TALL: K Selection</strong></h3>
 
-    <p>Topic modeling is a fundamental technique in <strong>unsupervised text mining</strong>, allowing users to uncover <strong>latent themes</strong> within large collections of documents. One of the key challenges in <strong>Latent Dirichlet Allocation (LDA)</strong> and other topic modeling techniques is determining the <strong>optimal number of topics (K)</strong>.</p>
+  <p>Topic modeling is a fundamental technique in <strong>unsupervised text mining</strong>, allowing users to uncover <strong>latent themes</strong> within large collections of documents. One of the key challenges in <strong>Latent Dirichlet Allocation (LDA)</strong> and other topic modeling techniques is determining the <strong>optimal number of topics (K)</strong>.</p>
 
-    <p>TALL estimates <strong>K automatically</strong> using four well-established statistical measures (<strong>Griffiths & Steyvers, 2004; Deveaud et al., 2014; Cao et al., 2009; Arun et al., 2010</strong>).
-    <br>However, users can also <strong>manually adjust K</strong> and explore different solutions in the <strong>Model Estimation Menu</strong>, enabling greater flexibility based on the dataset and research objectives.</p>
-    <hr>
-    <h4><strong>Why is K Selection Important?</strong></h4>
-    <ul>
-    <li>A <strong>too small K</strong> may <strong>merge distinct topics</strong>, reducing the model's ability to separate different thematic structures.</li>
-        <li>A <strong>too large K</strong> may <strong>fragment coherent topics</strong>, introducing unnecessary complexity and reducing interpretability.</li>
-        <li>The <strong>correct K</strong> ensures that topics are <strong>coherent, interpretable, and representative</strong> of the dataset.</li>
-    </ul>
-    <hr>
-    <h4><strong>Automatic K Estimation in TALL</strong></h4>
-    <p>TALL integrates <strong>four standard measures</strong> for determining the optimal number of topics in LDA:</p>
+  <p>TALL estimates <strong>K automatically</strong> using well-established statistical measures (<strong>Deveaud et al., 2014; Cao et al., 2009; Arun et al., 2010</strong>), including <strong>Perplexity</strong>.
+<br>However, users can also <strong>manually adjust K</strong> and explore different solutions in the <strong>Model Estimation Menu</strong>, enabling greater flexibility based on the dataset and research objectives.</p>
 
-    <h4><em>Griffiths & Steyvers (2004) – Log-Likelihood Maximization</em></h4>
-    <p>- Based on <strong>Bayesian model selection</strong>, this method computes the <strong>log-likelihood</strong> of the dataset given the topic model.</p>
-    <p>- The <strong>optimal K</strong> is the one that maximizes the likelihood function, meaning it best explains the data without overfitting.</p>
+  <hr>
+  <h4><strong>Why is K Selection Important?</strong></h4>
+  <ul>
+  <li>A <strong>too small K</strong> may <strong>merge distinct topics</strong>, reducing the model's ability to separate different thematic structures.</li>
+    <li>A <strong>too large K</strong> may <strong>fragment coherent topics</strong>, introducing unnecessary complexity and reducing interpretability.</li>
+    <li>The <strong>correct K</strong> ensures that topics are <strong>coherent, interpretable, and representative</strong> of the dataset.</li>
+  </ul>
 
-    <h4><em>Cao et al. (2009) – Topic Coherence Measure</em></h4>
-    <p>- Computes the <strong>average pairwise similarity</strong> between topics based on word distributions.</p>
-    <p>- The <strong>optimal K</strong> is found when inter-topic similarity is minimized, ensuring that topics are well-separated.</p>
+  <hr>
+  <h4><strong>Automatic K Estimation in TALL</strong></h4>
+  <p>TALL integrates several standard measures for determining the optimal number of topics in LDA:</p>
 
-    <h4><em>Arun et al. (2010) – KL Divergence-Based Measure</em></h4>
-    <p>- Compares the <strong>word-topic distribution</strong> and <strong>document-topic distribution</strong> using <strong>Kullback-Leibler (KL) divergence</strong>.</p>
-    <p>- The <strong>optimal K</strong> is identified as the point where KL divergence stabilizes, meaning topics balance between coherence and specificity.</p>
+  <h4><em>Blei et al. (2003) – Perplexity Measure</em></h4>
+  <p>- Perplexity (Probabilistic Evaluation of Generalization) is a <strong>likelihood-based metric</strong> that measures how well a model generalizes to unseen data.</p>
+  <p>- It evaluates the model's ability to predict a held-out test set, with <strong>lower values indicating better performance</strong>.</p>
+  <p>- Perplexity is defined as the inverse geometric mean of the likelihood function, computed over the test corpus.</p>
 
-    <h4><em>Deveaud et al. (2014) – A Hybrid Approach</em></h4>
-    <p>- A refinement of previous approaches that balances topic coherence and diversity.</p>
-    <p>- The <strong>optimal K</strong> is chosen where <strong>topic distinctiveness</strong> is maximized while preserving thematic coverage.</p>
-    <hr>
-    <h4><strong>Manual K Adjustment for Customization</strong></h4>
-    <p>While <strong>automatic estimation</strong> provides a strong baseline, users may need to adjust <strong>K manually</strong> based on <strong>domain knowledge and interpretability</strong>:</p>
-    <ul>
-        <li><strong>For exploratory research:</strong> Start with <strong>low K</strong> values (e.g., <strong>5-20 topics</strong>) to gain an <strong>overview of broad themes</strong>.</li>
-        <li><strong>For fine-grained analysis:</strong> Use <strong>higher K values</strong> (e.g., <strong>30-100 topics</strong>) to capture <strong>more nuanced subtopics</strong>.</li>
-        <li><strong>For benchmarking:</strong> Compare different <strong>K values</strong> using topic coherence scores and human interpretability.</li>
-    </ul>
-    <hr>
-    <div class='references'>
-        <h4><strong>References</strong></h4>
+  <h4><em>Cao et al. (2009) – Topic Coherence Measure</em></h4>
+  <p>- Computes the <strong>average pairwise similarity</strong> between topics based on word distributions.</p>
+  <p>- The <strong>optimal K</strong> is found when inter-topic similarity is minimized, ensuring that topics are well-separated.</p>
 
-        <p><strong>Griffiths, T.L., & Steyvers, M.</strong></p>
-        <p><i>Finding scientific topics.</i> <strong>Proceedings of the National Academy of Sciences</strong>, 101(suppl 1), 5228-5235.</p>
+  <h4><em>Arun et al. (2010) – KL Divergence-Based Measure</em></h4>
+  <p>- Compares the <strong>word-topic distribution</strong> and <strong>document-topic distribution</strong> using <strong>Kullback-Leibler (KL) divergence</strong>.</p>
+  <p>- The <strong>optimal K</strong> is identified as the point where KL divergence stabilizes, meaning topics balance between coherence and specificity.</p>
 
-        <p><strong>Deveaud, R., Sanjuan, E., & Bellot, P.</strong></p>
-        <p><i>Accurate and effective latent concept modeling for ad hoc information retrieval.</i> <strong>Document Numérique</strong>, 17, 61-84.</p>
+  <h4><em>Deveaud et al. (2014) – A Hybrid Approach</em></h4>
+  <p>- A refinement of previous approaches that balances topic coherence and diversity.</p>
+  <p>- The <strong>optimal K</strong> is chosen where <strong>topic distinctiveness</strong> is maximized while preserving thematic coverage.</p>
 
-        <p><strong>Cao, J., Xia, T., Li, J., Zhang, Y., & Tang, S.</strong></p>
-        <p><i>A density-based method for adaptive LDA model selection.</i> <strong>Neurocomputing</strong>, 72(7), 1775-1781.</p>
+  <hr>
+  <h4><strong>Manual K Adjustment for Customization</strong></h4>
+  <p>While <strong>automatic estimation</strong> provides a strong baseline, users may need to adjust <strong>K manually</strong> based on <strong>domain knowledge and interpretability</strong>:</p>
+  <ul>
+  <li><strong>For exploratory research:</strong> Start with <strong>low K</strong> values (e.g., <strong>5–20 topics</strong>) to gain an <strong>overview of broad themes</strong>.</li>
+  <li><strong>For fine-grained analysis:</strong> Use <strong>higher K values</strong> (e.g., <strong>30–100 topics</strong>) to capture <strong>more nuanced subtopics</strong>.</li>
+  <li><strong>For benchmarking:</strong> Compare different <strong>K values</strong> using topic coherence scores and human interpretability.</li>
+  </ul>
 
-        <p><strong>Arun, R., Suresh, V., Veni Madhavan, C.E., & Narasimha Murthy, M.N.</strong></p>
-        <p><i>On finding the natural number of topics with latent Dirichlet allocation: Some observations.</i> In Zaki, M.J., Yu, J.X., Ravindran, B., & Pudi, V. (Eds.),
-        <br><strong>Advances in Knowledge Discovery and Data Mining</strong> (pp. 391-402). Berlin, Heidelberg: Springer.</p>
+  <hr>
+  <div class='references'>
+    <h4><strong>References</strong></h4>
+
+    <p><strong>Blei, D. M., Ng, A. Y., & Jordan, M. I.</strong> (2003) <i>Latent Dirichlet Allocation.</i> <strong>Journal of Machine Learning Research</strong>, 3, 993–1022.</p>
+
+    <p><strong>Deveaud, R., Sanjuan, E., & Bellot, P.</strong> (2014) <i>Accurate and effective latent concept modeling for ad hoc information retrieval.</i> <strong>Document Numérique</strong>, 17, 61–84.</p>
+
+    <p><strong>Cao, J., Xia, T., Li, J., Zhang, Y., & Tang, S.</strong> (2009) <i>A density-based method for adaptive LDA model selection.</i> <strong>Neurocomputing</strong>, 72(7), 1775–1781.</p>
+
+    <p><strong>Arun, R., Suresh, V., Veni Madhavan, C.E., & Narasimha Murthy, M.N.</strong> (2010) <i>On finding the natural number of topics with latent Dirichlet allocation: Some observations.</i> In Zaki, M.J., Yu, J.X., Ravindran, B., & Pudi, V. (Eds.), <strong>Advances in Knowledge Discovery and Data Mining</strong> (pp. 391–402). Berlin, Heidelberg: Springer.</p>
     </div>
 
-</body>"
+    </body>"
 
   tmmodelestimation <- "<body>
 
@@ -1089,27 +1301,28 @@ wordincontext <- "<body>
 
       </body>"
 
-  return(list(importmenu = importmenu,
-              split = split,
-              random = random,
-              externalinfo = externalinfo,
-              tokenization = tokenization,
-              specialentities = specialentities,
-              multiwordcreation = multiwordcreation,
-              multiwordlist =  multiwordlist,
-              customterm = customterm,
-              posselection = posselection,
-              overview = overview,
-              wordincontext = wordincontext,
-              reinert = reinert,
-              correspondenceanalysis = correspondenceanalysis,
-              cowordanalysis = cowordanalysis,
-              tmkchoice = tmkchoice,
-              tmmodelestimation = tmmodelestimation,
-              polaritydetection = polaritydetection,
-              summarization = summarization
+  return(list(
+    importmenu = importmenu,
+    split = split,
+    random = random,
+    externalinfo = externalinfo,
+    tokenization = tokenization,
+    specialentities = specialentities,
+    multiwordcreation = multiwordcreation,
+    multiwordlist = multiwordlist,
+    customterm = customterm,
+    posselection = posselection,
+    overview = overview,
+    wordincontext = wordincontext,
+    reinert = reinert,
+    correspondenceanalysis = correspondenceanalysis,
+    cowordanalysis = cowordanalysis,
+    thematicmap = thematicmap,
+    embeddingtrain = embeddingtrain,
+    embeddingsimilarity = embeddingsimilarity,
+    tmkchoice = tmkchoice,
+    tmmodelestimation = tmmodelestimation,
+    polaritydetection = polaritydetection,
+    summarization = summarization
   ))
 }
-
-
-

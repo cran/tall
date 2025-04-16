@@ -22,14 +22,32 @@ in a more efficient and accessible manner.
 
 ## Setup
 
-You can install the development version of TALL from
-[GitHub](https://github.com/) with:
+TALL can be installed in two ways, depending on whether you want the
+stable version or the latest development version.
+
+### Official release
+
+You can install the **official release** of TALL from the Comprehensive
+R Archive Network [CRAN](https://CRAN.R-project.org/package=tall) and
+updated monthly.
 
 ``` r
-# Note: If this is your first time installing TALL, run the following code line:
-# install.packages("remotes")
-remotes::install_github("massimoaria/tall")
+if (!require("pak", quietly=TRUE)) install.packages("pak")
+pak::pkg_install("tall")
 ```
+
+### Development release
+
+If you want access to the most recent features and updates not yet
+available on CRAN, you can install the **development version** directly
+from [our GitHub repository](https://github.com/massimoaria/tall) with:
+
+``` r
+if (!require("pak", quietly=TRUE)) install.packages("pak")
+pak::pkg_install("massimoaria/tall")
+```
+
+### Run Tall
 
 Load the library with:
 
@@ -37,7 +55,7 @@ Load the library with:
 library("tall")
 ```
 
-and then start TALL shiny app with:
+and then run TALL shiny app with:
 
 ``` r
 tall()
@@ -125,7 +143,11 @@ researchers to conduct thorough the following workflow:
 
 ### Automatic Lemmatization and PoS-Tagging through LLM
 
-![](images/postag.png)
+![](images/Tokenization&PoSTagging.png)
+
+### Language, Model, and Analysis Term Selection
+
+![](images/Language,%20Model,%20and%20Analysis%20Term%20Selection.png)
 
 ### Tagging Special Entities through multiple regex
 

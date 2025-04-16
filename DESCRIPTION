@@ -1,6 +1,6 @@
 Package: tall
 Title: Text Analysis for All
-Version: 0.1.1
+Version: 0.2.0
 Authors@R: c(
     person(given = "Massimo", 
            family = "Aria",
@@ -42,12 +42,12 @@ Imports: graphics, dplyr (>= 1.1.0), shinyWidgets, shinydashboardPlus,
         (>= 1.0.3), RSpectra, rlang, DT, openxlsx, visNetwork, igraph,
         udpipe, topicmodels, pdftools, textrank, strucchange,
         sparkline, tidygraph, readxl, readtext, jsonlite, fontawesome,
-        ggraph, ca, ldatuning, shinycssloaders, shinyjs, shinyFiles,
-        readr, curl, pagedown, parallel, doParallel
+        ggraph, ca, shinycssloaders, shinyjs, shinyFiles, readr, curl,
+        pagedown, word2vec, umap, parallel, doParallel
 LazyData: true
 LinkingTo: Rcpp
 NeedsCompilation: yes
-Packaged: 2025-03-13 11:44:18 UTC; massimoaria
+Packaged: 2025-04-16 13:45:06 UTC; massimoaria
 Author: Massimo Aria [aut, cre, cph] (0000-0002-8517-9411),
   Maria Spano [aut] (<https://orcid.org/0000-0002-3103-2342>),
   Luca D'Aniello [aut] (<https://orcid.org/0000-0003-1019-9212>),
@@ -55,4 +55,4 @@ Author: Massimo Aria [aut, cre, cph] (0000-0002-8517-9411),
   Michelangelo Misuraca [ctb] (<https://orcid.org/0000-0002-8794-966X>)
 Maintainer: Massimo Aria <aria@unina.it>
 Repository: CRAN
-Date/Publication: 2025-03-13 12:10:02 UTC
+Date/Publication: 2025-04-16 14:20:02 UTC

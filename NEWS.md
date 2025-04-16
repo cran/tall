@@ -1,3 +1,6 @@
+# tall 0.1.2
+* Added a new option in Import: Now it is possible to import text file exported from biblioshiny
+
 # tall 0.1.1
 * Added new word in context analysis
 * Solved a lot of minor issues
