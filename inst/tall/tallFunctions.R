@@ -254,7 +254,6 @@ loadSampleCollection <- function(sampleName) {
          bibliometrix = {
            # check if the file model already exists
            file_lang <- dir(path_language_model, pattern = "tall_bibliometrix.tall")[1]
-           # url <- paste0("https://www.bibliometrix.org/tall_lexicon/sampleData/tall_bibliometrix.tall")
            url <- paste0("https://raw.githubusercontent.com/massimoaria/tall.language.models/main/sample.data/tall_bibliometrix.tall")
 
            destfile <- paste0(path_language_model, "/tall_bibliometrix.tall")
@@ -265,6 +264,12 @@ loadSampleCollection <- function(sampleName) {
            url <- paste0("https://raw.githubusercontent.com/massimoaria/tall.language.models/main/sample.data/bbc.zip")
            destfile <- paste0(path_language_model, "/bbc.zip")
            file <- paste0(path_language_model, "/bbc.zip")
+         },
+         usairlines = {
+           file_lang <- dir(path_language_model, pattern = "usairlines.zip")[1]
+           url <- paste0("https://raw.githubusercontent.com/massimoaria/tall.language.models/main/sample.data/usairlines.zip")
+           destfile <- paste0(path_language_model, "/usairlines.zip")
+           file <- paste0(path_language_model, "/usairlines.zip")
          }
   )
 
@@ -2567,6 +2572,7 @@ tallThematicmap <- function(dfTag, term = "lemma", group = "doc_id", n = 100, la
     reframe(
       wordlist = paste(label, value, collapse = "\n"),
       name_full = paste(label[1:min(n.labels, n())], collapse = "\n"),
+      name_full_gemini = paste(label[1:min(10, n())], collapse = "\n"),
       color = color[1],
       freq = max(freq)
     ) %>%
@@ -2597,7 +2603,8 @@ tallThematicmap <- function(dfTag, term = "lemma", group = "doc_id", n = 100, la
   return(list(net = net, df = df, df_lab = df_lab))
 }
 
-plotTM <- function(df, size = 0.5) {
+plotTM <- function(df, size = 0.5, gemini = FALSE) {
+  if (gemini) df$name_full <- df$name_full_gemini
   meandens <- mean(df$rdensity)
   meancentr <- mean(df$rcentrality)
   xlimits <- c(0, max(df$rcentrality) + 1)
@@ -4270,9 +4277,9 @@ abstractingDocument <- function(s, n, id) {
 }
 
 ### EXCEL REPORT FUNCTIONS ----
-addDataWb <- function(list_df, wb, sheetname) {
+addDataWb <- function(list_df, wb, sheetname, startRow = 1) {
   l <- length(list_df)
-  startRow <- 1
+  # startRow <- 1
   for (i in 1:l) {
     df <- list_df[[i]]
     n <- nrow(df)
@@ -4289,7 +4296,7 @@ addDataScreenWb <- function(list_df, wb, sheetname) {
   }
   addWorksheet(wb = wb, sheetName = sheetname, gridLines = FALSE)
   if (!is.null(list_df)) {
-    addDataWb(list_df, wb, sheetname)
+    addDataWb(list_df, wb, sheetname, startRow = 1)
     col <- max(unlist(lapply(list_df, ncol))) + 2
   } else {
     col <- 1
@@ -4299,9 +4306,9 @@ addDataScreenWb <- function(list_df, wb, sheetname) {
   return(results)
 }
 
-addGgplotsWb <- function(list_plot, wb, sheetname, col, width = 10, height = 7, dpi = 75) {
+addGgplotsWb <- function(list_plot, wb, sheetname, col, width = 10, height = 7, dpi = 75, startRow = 1) {
   l <- length(list_plot)
-  startRow <- 1
+  # startRow <- 1
   for (i in 1:l) {
     fileName <- tempfile(
       pattern = "figureImage",
@@ -4347,7 +4354,7 @@ addScreenWb <- function(df, wb, width = 14, height = 8, dpi = 75) {
       sh <- sheet[i]
       df_sh <- df %>% dplyr::filter(.data$sheet == sh)
       l <- nrow(df_sh)
-      startRow <- 1
+      startRow <- 30
       for (j in 1:l) {
         fileName <- df_sh$file[j]
         insertImage(
@@ -4362,7 +4369,7 @@ addScreenWb <- function(df, wb, width = 14, height = 8, dpi = 75) {
   return(wb)
 }
 
-addSheetToReport <- function(list_df, list_plot, sheetname, wb, dpi = 75) {
+addSheetToReport <- function(list_df, list_plot, sheetname, wb, dpi = 75, startRow = 1) {
   ind <- which(regexpr(sheetname, wb$sheet_names) > -1)
   if (length(ind) > 0) {
     sheetname <- paste(sheetname, "(", length(ind) + 1, ")", sep = "")
@@ -4371,13 +4378,13 @@ addSheetToReport <- function(list_df, list_plot, sheetname, wb, dpi = 75) {
 
   if (!is.null(list_df)) {
     col <- max(unlist(lapply(list_df, ncol))) + 2
-    wb <- addDataWb(list_df, wb = wb, sheetname = sheetname)
+    wb <- addDataWb(list_df, wb = wb, sheetname = sheetname, startRow = 1)
   } else {
     col <- 1
   }
 
   if (!is.null(list_plot)) {
-    wb <- addGgplotsWb(list_plot, wb = wb, sheetname = sheetname, col = col, dpi = dpi)
+    wb <- addGgplotsWb(list_plot, wb = wb, sheetname = sheetname, col = col, dpi = dpi, startRow = startRow)
   }
   # values$sheet_name <- sheetname
   return(wb)
@@ -4596,7 +4603,14 @@ resetValues <- function() {
   } else {
     values$menu <- -1
   }
-  # values$embedding <- FALSE
+
+  ## gemini api
+  home <- homeFolder()
+  path_gemini_key <- paste0(file.path(home, "tall"),"/.gemini_key.txt", collapse="")
+  # check if sub directory exists
+  values$geminiAPI <- load_api_key(path_gemini_key)
+  values$corpus_description <- NULL
+  values$gemini_additional <- NULL
 
   return(values)
 }
@@ -4771,11 +4785,11 @@ highlight <- function(df, term = "lemma", upos = NULL) {
 
 
 ## saveTall function ----
-saveTall <- function(dfTag, custom_lists, language, treebank, menu, where, file, generalTerm) {
+saveTall <- function(dfTag, custom_lists, language, treebank, menu, where, file, generalTerm, corpus_description) {
   D <- date()
   D <- strsplit(gsub("\\s+", " ", D), " ")
   D <- paste(unlist(D)[c(1, 2, 3, 5)], collapse = " ")
-  save(dfTag, custom_lists, language, treebank, menu, D, where, file = file, generalTerm)
+  save(dfTag, custom_lists, language, treebank, menu, D, where, file = file, generalTerm, corpus_description)
 }
 
 ### Export Tall analysis in .tall file ----
@@ -5032,11 +5046,6 @@ DTformat <- function(df, nrow = 10, filename = "Table", pagelength = TRUE, left 
       select(Document, everything())
   }
 
-  # if (isTRUE(specialtags)){
-  #   df <- df %>%
-  #     mutate(Table = glue::glue('<button id2="custom_btn" onclick="Shiny.onInputChange(\'button_id2\', \'{UPOS}\')">View</button>')) %>%
-  #     select(Table, everything())
-  # }
   if (isTRUE(specialtags)) {
     df <- df %>%
       rename("Special Entity" = "UPOS") %>%
@@ -5044,12 +5053,6 @@ DTformat <- function(df, nrow = 10, filename = "Table", pagelength = TRUE, left 
       select("Frequency Distribution", everything())
   }
 
-
-  # if (isTRUE(delete)){
-  #   df <- df %>%
-  #     mutate(Remove = glue::glue('<button id="custom_btn_del" onclick="Shiny.onInputChange(\'button_id_del\', \'{doc_id}\')">Remove</button>')) %>%
-  #     select(Document, Remove, everything())
-  # }
   if (isTRUE(delete)) {
     df <- df %>%
       mutate(Remove = paste0('<button id="custom_btn_del" onclick="Shiny.onInputChange(\'button_id_del\', \'', doc_id, '\')">Remove</button>')) %>%
@@ -5170,31 +5173,44 @@ freqGgplot <- function(df, x = 2, y = 1, n = 20, title = "NOUN Frequency") {
 }
 
 topicGplot <- function(x, nPlot = 10, type = "beta") {
-  beta_long <- x %>%
-    pivot_longer(cols = 2:ncol(.), names_to = "topic", values_to = "probability") %>%
+
+  # Identify ID column based on type
+  id_col <- if (type == "beta") "word" else "doc"
+  topic_names <- setdiff(colnames(x), id_col)
+
+  # Reshape and filter top n per topic
+  long_data <- x %>%
+    pivot_longer(cols = all_of(topic_names), names_to = "topic", values_to = "probability") %>%
     group_by(topic) %>%
     slice_max(order_by = probability, n = nPlot) %>%
-    arrange(desc(probability), .by_group = T) %>%
+    arrange(desc(probability), .by_group = TRUE) %>%
     ungroup() %>%
-    mutate(topic = paste0("topic ", topic))
+    mutate(topic = paste0("Topic ", topic))
 
-  switch(type,
-         beta = {
-           g <- ggplot(beta_long, aes(x = probability, y = word, fill = factor(topic)))
-         },
-         theta = {
-           g <- ggplot(beta_long, aes(x = probability, y = doc, fill = factor(topic)))
-         }
-  )
-  g + geom_col(show.legend = FALSE) +
+  # Reorder factor levels for y-axis
+  long_data <- long_data %>%
+    group_by(topic) %>%
+    mutate(label = factor(.data[[id_col]], levels = rev(unique(.data[[id_col]])))) %>%
+    ungroup()
+
+  # Select the required number of colors
+  unique_topics <- unique(long_data$topic)
+  colors <- colorlist()[seq_along(unique_topics)]
+
+  # Build the plot
+  g <- ggplot(long_data, aes(x = probability, y = label, fill = topic)) +
+    geom_col(show.legend = FALSE) +
     facet_wrap(~topic, scales = "free") +
+    scale_fill_manual(values = setNames(colors, unique_topics)) +
+    theme_minimal(base_size = 11) +
     theme(
-      axis.text.y = element_text(angle = 0, hjust = 0, size = 9),
-      axis.text.x = element_text(size = 10),
-      panel.grid.major = element_blank(),
-      panel.grid.minor = element_blank(),
-      panel.background = element_blank()
-    )
+      axis.text.y = element_text(angle = 0, hjust = 0),
+      panel.grid.major.y = element_blank()
+    ) +
+    labs(y = ifelse(type == "beta", "Word", "Document"),
+         x = "Probability")
+
+  return(g)
 }
 
 ### deleteCache ------
@@ -5734,3 +5750,6 @@ model_accuracy <- function() {
 
   return(df)
 }
+
+
+

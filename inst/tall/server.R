@@ -1,6 +1,7 @@
 ##  Server ####
 source("tallFunctions.R", local = TRUE)
 source("tallShot.R", local = TRUE)
+source("tallAI.R", local = TRUE)
 
 ## suppress warnings
 # options(warn = -1)
@@ -103,6 +104,23 @@ To ensure the functionality of TALL,
     param_stay_page_newPT <<- FALSE
   }
 
+  ## observe Gemini copy2clipboard button
+  observeEvent(input$copy_btn, {
+    content <- geminiSave(values, input$sidebarmenu, type="clip")
+    copy_to_clipboard(content)
+  })
+
+  ## observe Gemini Save button
+  observeEvent(input$save_btn, {
+    geminiSave(values, input$sidebarmenu, type="save")
+  })
+
+  ## observe gemini generate button
+  observeEvent(input$gemini_btn, {
+    values$gemini_additional <- input$gemini_additional ## additional info to Gemini prompt
+    values <- geminiWaitingMessage(values, input$sidebarmenu)
+    values <- geminiGenerate(values, input$sidebarmenu, values$gemini_additional,values$gemini_model_parameters)
+  })
 
   ## suppress summarise message
   options(dplyr.summarise.inform = FALSE)
@@ -178,54 +196,6 @@ To ensure the functionality of TALL,
   #   updateTabItems(session, "sidebarmenu", "w_word2vec")
   # })
 
-  ## Choose Working folder in Setting Menu
-  roots <- c(home = homeFolder())
-
-  observe({
-    shinyDirChoose(input, "workingfolder", roots = roots, filetypes = c(""))
-  })
-
-  observeEvent(
-    eventExpr = input$workingfolder,
-    handlerExpr = {
-      wdTall <- parseDirPath(roots = roots, input$workingfolder)
-
-      if (length(wdTall) == 0 || is.null(wdTall)) {
-        if (is.null(wdFolder())) {
-          values$menu <- -2
-          # output$wdFolder <- renderText({
-          #   "No folder selected."
-          # })
-        }
-      } else {
-        # setting up the main directory
-        home <- homeFolder()
-        path_tall <- file.path(home, "tall")
-        # check if sub directory exists
-        if (!file.exists(path_tall)) {
-          dir.create(path_tall)
-        }
-        writeLines(wdTall, con = paste0(path_tall, "/tallWD.tall"))
-        if (values$menu == -2) values$menu <- -1
-        values$wdTall <- wdTall
-        # output$wdFolder <- renderText({
-        #     values$wdTall
-        # })
-      }
-
-      # if (nc>0){
-      #   writeLines(values$wdTall, con = paste0(homeFolder(),"/tall/tallWD.tall"))
-      #   values$menu <-  -1
-      #   output$wdFolder <- renderText({
-      #       values$wdTall
-      #   })
-      # }
-    }, ignoreNULL = TRUE
-  )
-
-  output$wdFolder <- renderText({
-    values$wdTall
-  })
 
 
   output$runButton <- renderUI({
@@ -317,7 +287,8 @@ To ensure the functionality of TALL,
                       label = "Select sample texts",
                       choices = c(
                         "BBC news" = "bbc",
-                        "Bibliometrix" = "bibliometrix"
+                        "Bibliometrix" = "bibliometrix",
+                        "US Airlines Tweets" = "usairlines"
                       ),
                       selected = "bibliometrix"
           ),
@@ -339,6 +310,15 @@ To ensure the functionality of TALL,
             condition = "input.demo_file=='bbc'",
             helpText(
               em("A collection of 386 short news stories published in the entertainment section of the BBC News website."),
+              br(),
+              br(),
+              em("The texts are in English.")
+            )
+          ),
+          conditionalPanel(
+            condition = "input.demo_file=='usairlines'",
+            helpText(
+              em("The dataset is the 'Twitter US Airline Sentiment' collection, a publicly available and widely used dataset originally hosted on Kaggle. It contains tweets collected during February 2015 that pertain to major U.S.-based airlines."),
               br(),
               br(),
               em("The texts are in English.")
@@ -374,6 +354,13 @@ To ensure the functionality of TALL,
       )
     } else {
       list(
+        textAreaInput(
+          inputId = "corpus_description",
+          label = "Please provide a brief description of your corpus (e.g., source, type of content, domain) to improve prompts for the TALL AI Assistant:",
+          placeholder = "Example: The corpus consists of 150 academic articles from biomedical journals published between 2015 and 2020...",
+          rows = 8,
+          width = "100%"
+        ),
         helpText(em(
           "To load a new text collection,",
           br(), "it is necessary to reset the app."
@@ -492,6 +479,7 @@ To ensure the functionality of TALL,
              values$treebank <- treebank
              values$D <- D
              values$where <- where
+             values$corpus_description <- corpus_description
              if (exists("generalTerm")) values$generalTerm <- generalTerm
              values$resetNeed <- TRUE
              # values$metadata <- metadata
@@ -513,6 +501,7 @@ To ensure the functionality of TALL,
                       values$language <- language
                       values$D <- D
                       values$where <- where
+                      values$corpus_description <- "The dataset is composed of a collection of 444 scientific articles written in English in which the authors used the Bibliometrix R package to perform systematic literature reviews.\n The textual data consists of the article abstracts, while the additional information includes metadata such as the list of co-authors, the first author, the year of publication, and the journal name."
                       values$resetNeed <- TRUE
                       if (values$menu == 1) updateTabItems(session, "sidebarmenu", "custTermList")
                       if (values$menu > 1) updateTabItems(session, "sidebarmenu", "posTagSelect")
@@ -526,6 +515,26 @@ To ensure the functionality of TALL,
                       txt <- read_files(files, ext = "txt", subfolder = FALSE)
                       values$menu <- 0
                       values$custom_lists <- NULL
+                      values$corpus_description <- "A collection of 386 short news published in the entertainment section of the BBC News website."
+                      values$resetNeed <- TRUE
+                      values$txt <- txt %>%
+                        mutate(text_original = text) %>%
+                        arrange(doc_id)
+                    },
+                    usairlines = {
+                      file_tall <- loadSampleCollection("usairlines")
+                      files <- list(name = "usairlines.zip", datapath = file_tall)
+                      txt <- read_files(files, ext = "csv", subfolder = FALSE)
+                      values$menu <- 0
+                      values$custom_lists <- NULL
+                      values$corpus_description <- paste0("The dataset under analysis is the 'Twitter US Airline Sentiment' collection, a publicly available",
+                                                          " and widely used dataset originally hosted on Kaggle. It contains tweets collected during February 2015",
+                                                          " that pertain to major U.S.-based airlines. The primary objective of this dataset is to capture and analyze",
+                                                          " the sentiment expressed by travelers regarding their airline experiences. Each tweet is annotated with ",
+                                                          "a sentiment label—positive, neutral, or negative—based on the emotional tone conveyed in the text. ",
+                                                          "This collection is frequently employed in natural language processing tasks, particularly for training ",
+                                                          "and evaluating sentiment classification models. In this context, the dataset will be used to explore how ",
+                                                          "airline passengers articulated their opinions and emotions on Twitter during the specified period.")
                       values$resetNeed <- TRUE
                       values$txt <- txt %>%
                         mutate(text_original = text) %>%
@@ -623,6 +632,15 @@ To ensure the functionality of TALL,
       )
     }
   })
+
+  observeEvent(eventExpr = {
+    input$corpus_description},
+               handlerExpr = {
+                 if (input$corpus_description!="" & nchar(input$corpus_description)>1){
+                   values$corpus_description <- input$corpus_description
+                 }
+  },ignoreNULL = TRUE)
+
   ### shortpath for folder path ----
   output$folder <- renderUI({
     path <- shortpath(values$path)
@@ -663,6 +681,9 @@ To ensure the functionality of TALL,
       "<strong>Language:</strong> ", tools::toTitleCase(values$language),
       " - <strong>Treebank:</strong> ", values$treebank
     )
+    txt2c <- paste0(
+      "<strong>Corpus Description:</strong> ", values$corpus_description
+    )
 
     if (!is.null(dim(values$custom_lists))) {
       ncust <- nrow(values$custom_lists)
@@ -701,6 +722,7 @@ To ensure the functionality of TALL,
       "<li style='margin-bottom: 15px;'>", txt1, "</li>",
       "<li style='margin-bottom: 15px;'>", txt2, "</li>",
       "<li style='margin-bottom: 15px;'>", txt2b, "</li>",
+      "<li style='margin-bottom: 15px;'>", txt2c, "</li>",
       "<li style='margin-bottom: 15px;'>", txt3ter, "</li>",
       "<li style='margin-bottom: 15px;'>", txt3bis, "</li>",
       "<li style='margin-bottom: 15px;'>", txt3, "</li>",
@@ -922,7 +944,6 @@ To ensure the functionality of TALL,
   EXTINFOloading <- eventReactive(input$extInfoRun, {
     req(input$extInfoFile)
     file_extinfo <- input$extInfoFile$datapath
-    # print(file_tall)
     values$txt <- loadExtInfo(file_extinfo, values$txt)
   })
 
@@ -1153,7 +1174,8 @@ To ensure the functionality of TALL,
     handlerExpr = {
       file <- paste("Tall-Export-File-", sys.time(), ".tall", sep = "")
       file_path <- destFolder(file, values$wdTall)
-      saveTall(values$dfTag, values$custom_lists, values$language, values$treebank, values$menu, "Custom Term Lists", file_path, values$generalTerm)
+      saveTall(values$dfTag, values$custom_lists, values$language, values$treebank, values$menu, "Custom Term Lists", file_path,
+               values$generalTerm, values$corpus_description)
       popUp(title = "Saved in your working folder", type = "saved")
     }
   )
@@ -1224,7 +1246,8 @@ To ensure the functionality of TALL,
     handlerExpr = {
       file <- paste("Tall-Export-File-", sys.time(), ".tall", sep = "")
       file_path <- destFolder(file, values$wdTall)
-      saveTall(values$dfTag, values$custom_lists, values$language, values$treebank, values$menu, "POS Tag Selection", file_path, values$generalTerm)
+      saveTall(values$dfTag, values$custom_lists, values$language, values$treebank, values$menu, "POS Tag Selection",
+               file_path, values$generalTerm, values$corpus_description)
       popUp(title = "Saved in your working folder", type = "saved")
     }
   )
@@ -1395,7 +1418,8 @@ To ensure the functionality of TALL,
     handlerExpr = {
       file <- paste("Tall-Export-File-", sys.time(), ".tall", sep = "")
       file_path <- destFolder(file, values$wdTall)
-      saveTall(values$dfTag, values$custom_lists, values$language, values$treebank, values$menu, "Custom Term Lists", file_path, values$generalTerm)
+      saveTall(values$dfTag, values$custom_lists, values$language, values$treebank, values$menu, "Custom Term Lists", file_path,
+               values$generalTerm, values$corpus_description)
       popUp(title = "Saved in your working folder", type = "saved")
     }
   )
@@ -1535,7 +1559,8 @@ To ensure the functionality of TALL,
     handlerExpr = {
       file <- paste("Tall-Export-File-", sys.time(), ".tall", sep = "")
       file_path <- destFolder(file, values$wdTall)
-      saveTall(values$dfTag, values$stats, values$language, values$treebank, values$menu, "Multi-Word Creation", file_path, values$generalTerm)
+      saveTall(values$dfTag, values$stats, values$language, values$treebank, values$menu, "Multi-Word Creation", file_path,
+               values$generalTerm, values$corpus_description)
       popUp(title = "Saved in your working folder", type = "saved")
     }
   )
@@ -1625,7 +1650,8 @@ To ensure the functionality of TALL,
     handlerExpr = {
       file <- paste("Tall-Export-File-", sys.time(), ".tall", sep = "")
       file_path <- destFolder(file, values$wdTall)
-      saveTall(values$dfTag, values$custom_lists, values$language, values$treebank, values$menu, "Multi-Word by a List", file_path, values$generalTerm)
+      saveTall(values$dfTag, values$custom_lists, values$language, values$treebank, values$menu, "Multi-Word by a List", file_path,
+               values$generalTerm, values$corpus_description)
       popUp(title = "Saved in your working folder", type = "saved")
     }
   )
@@ -1700,7 +1726,8 @@ To ensure the functionality of TALL,
     handlerExpr = {
       file <- paste("Tall-Export-File-", sys.time(), ".tall", sep = "")
       file_path <- destFolder(file, values$wdTall)
-      saveTall(values$dfTag, values$custom_lists, values$language, values$treebank, values$menu, "POS Tag Selection", file_path, values$generalTerm)
+      saveTall(values$dfTag, values$custom_lists, values$language, values$treebank, values$menu, "POS Tag Selection", file_path,
+               values$generalTerm, values$corpus_description)
       popUp(title = "Saved in your working folder", type = "saved")
     }
   )
@@ -2681,6 +2708,10 @@ To ensure the functionality of TALL,
     values$contextNetwork
   })
 
+  output$ContextGeminiUI <- renderUI({
+    values$gemini_model_parameters <- geminiParameterPrompt(values, input$sidebarmenu, input)
+    geminiOutput(title = "Gemini AI", content = values$contextGemini, values)
+  })
 
   ## Reinert Clustering ----
   dendReinFunction <- eventReactive(
@@ -2971,6 +3002,13 @@ To ensure the functionality of TALL,
     values$CADendrogram
   })
 
+  # gemini button for correspondence analysis
+  output$caGeminiUI <- renderUI({
+    values$gemini_model_parameters <- geminiParameterPrompt(values, input$sidebarmenu, input)
+    geminiOutput(title = "", content = values$caGemini, values)
+
+  })
+
 
   # CA Table
   output$caCoordTable <- renderDT(server = FALSE, {
@@ -3026,7 +3064,10 @@ To ensure the functionality of TALL,
     if (!is.null(values$CA)) {
       popUp(title = NULL, type = "waiting")
       sheetname <- "CorrespondenceAnalysis"
+
+      Gem <- values$caGemini %>% string_to_sentence_df()
       list_df <- list(
+        Gem,
         values$CA$wordCoordData,
         values$CA$contribData,
         values$CA$cosineData,
@@ -3135,6 +3176,7 @@ To ensure the functionality of TALL,
             "Group From" = group_from,
             "Group To" = group_to
           )
+        values$gemini_model_parameters <- geminiParameterPrompt(values, input$sidebarmenu, input)
       }
     }
   )
@@ -3142,6 +3184,13 @@ To ensure the functionality of TALL,
   output$w_networkCoocPlot <- renderVisNetwork({
     netFunction()
     values$netVis
+  })
+
+  # gemini button for word network
+  output$w_networkGeminiUI <- renderUI({
+    values$gemini_model_parameters <- geminiParameterPrompt(values, input$sidebarmenu, input)
+    geminiOutput(title = "", content = values$w_networkGemini, values)
+
   })
 
   output$w_networkCoocNodesTable <- renderDT(server = FALSE, {
@@ -3179,7 +3228,9 @@ To ensure the functionality of TALL,
     if (!is.null(values$network$nodes)) {
       popUp(title = NULL, type = "waiting")
       sheetname <- "CoWord"
+      Gem <-  values$w_networkGemini %>% string_to_sentence_df()
       list_df <- list(
+        Gem,
         values$network$nodesData,
         values$network$edgesData
       )
@@ -3492,7 +3543,6 @@ To ensure the functionality of TALL,
       )
       ## check to verify if groups exist or not
 
-
       if (input$w_groupTM == "Documents" & "ungroupDoc_id" %in% names(values$dfTag)) {
         values$TM <- tallThematicmap(backToOriginalGroups(LemmaSelection(values$dfTag)) %>% filter(docSelected),
                                      term = values$generalTerm, group = group, n = input$nMaxTM, labelsize = input$labelSizeTM, n.labels = input$n.labelsTM,
@@ -3525,6 +3575,13 @@ To ensure the functionality of TALL,
   output$w_networkTMMapPlot <- renderPlotly({
     TMFunction()
     values$TMmap
+  })
+
+  # gemini button for word in context
+  output$w_networkTMGeminiUI <- renderUI({
+    values$gemini_model_parameters <- geminiParameterPrompt(values, input$sidebarmenu, input)
+    geminiOutput(title = "", content = values$w_networkTMGemini, values)
+
   })
 
   output$w_networkTMNetPlot <- renderVisNetwork({
@@ -3570,7 +3627,9 @@ To ensure the functionality of TALL,
     if (!is.null(values$TM)) {
       popUp(title = NULL, type = "waiting")
       sheetname <- "ThematicMap"
+      Gem <- values$w_networkTMGemini %>% string_to_sentence_df()
       list_df <- list(
+        Gem,
         values$TM$ClusterTable,
         values$TM$df_lab %>% select(-Cluster_Frequency)
       )
@@ -3750,6 +3809,13 @@ To ensure the functionality of TALL,
     values$w2vNetworkPlot
   })
 
+  # gemini button for word embedding similarity
+  output$w_w2vGeminiUI <- renderUI({
+    values$gemini_model_parameters <- geminiParameterPrompt(values, input$sidebarmenu, input)
+    geminiOutput(title = "", content = values$w_w2vGemini, values)
+
+  })
+
   observe({
     visNetworkProxy("w_w2vNetworkplot") %>%
       visSelectNodes(id = input$w2v_selected_node) %>%
@@ -3789,7 +3855,9 @@ To ensure the functionality of TALL,
     if (!is.null(values$umapDf)) {
       popUp(title = NULL, type = "waiting")
       sheetname <- "EmbeddingSimilarity"
+      Gem <- values$w_w2vGemini %>% string_to_sentence_df()
       list_df <- list(
+        Gem,
         values$w2vNetwork$edges,
         values$umapDf
       )
@@ -3915,26 +3983,6 @@ To ensure the functionality of TALL,
 
   ## Topic Modeling ----
   ## K choice ----
-
-  # output$TMmetric <- renderUI({
-  #   metrics <- c(
-  #     "CaoJuan-2009" = "CaoJuan2009",
-  #     "Deveaud-2014" = "Deveaud2014",
-  #     "Arun-2010" = "Arun2010",
-  #     "Perplexity" = "Perplexity"
-  #   )
-  #   )
-  #
-  #   selectInput("metric", "Metric for model tuning",
-  #               choices = c(
-  #                 "CaoJuan-2009" = "CaoJuan2009",
-  #                 "Deveaud-2014" = "Deveaud2014",
-  #                 "Arun-2010" = "Arun2010",
-  #                 "Perplexity" = "Perplexity"
-  #               ),
-  #               selected = "CaoJuan2009"
-  #   )
-  # })
 
   netTMKselect <- eventReactive(
     ignoreNULL = TRUE,
@@ -4094,12 +4142,7 @@ To ensure the functionality of TALL,
     values$tmHeatmap$Hplot
   })
 
-  # output$d_tm_networkTable <- renderDataTable(server = FALSE,{
-  #   netTMestim()
-  #   DTformat(values$tmHeatmap$H, left=1, numeric=c(2:ncol(values$tmHeatmap$H)), round=4, nrow=10, size="85%", filename = "TopicModel_TopicCorrelations")
-  # })
-
-  observeEvent(input$TMplotRight, {
+ observeEvent(input$TMplotRight, {
     if (values$TMplotIndex < ceiling(req(values$tmK) / 3)) {
       values$TMplotIndex <- values$TMplotIndex + 1
     }
@@ -4181,6 +4224,11 @@ To ensure the functionality of TALL,
     DTformat(values$theta, left = 1, numeric = c(2:ncol(values$TMestim_result$theta)), round = 4, nrow = 10, size = "85%", filename = "TopicModel_ThetaTable")
   })
 
+  output$d_tm_GeminiUI <- renderUI({
+    values$gemini_model_parameters <- geminiParameterPrompt(values, input$sidebarmenu, input)
+    geminiOutput(title = "Gemini AI", content = values$tmGemini, values)
+  })
+
   observeEvent(
     eventExpr = {
       input$d_tm_estimExport
@@ -4208,9 +4256,11 @@ To ensure the functionality of TALL,
       popUp(title = NULL, type = "waiting")
       values$tmGplotBeta <- topicGplot(values$TMestim_result$beta, nPlot = input$nTopicPlot, type = "beta")
       values$tmGplotTheta <- topicGplot(values$TMestim_result$theta, nPlot = input$nTopicPlot, type = "theta")
-      list_df <- list(values$beta, values$theta)
+      Gem <- values$tmGemini %>% string_to_sentence_df()
+      list_df <- list(values$tmGemini %>% string_to_sentence_df(),
+                      values$beta, values$theta)
       list_plot <- list(values$tmGplotBeta, values$tmGplotTheta, values$tmHeatmap$HplotStatic)
-      wb <- addSheetToReport(list_df, list_plot, sheetname = "ModelEstim", wb = values$wb)
+      wb <- addSheetToReport(list_df, list_plot, sheetname = "ModelEstim", wb = values$wb, startRow = nrow(Gem)+1)
       values$wb <- wb
       popUp(title = "Model Estimation Results", type = "success")
       values$myChoices <- sheets(values$wb)
@@ -4274,27 +4324,29 @@ To ensure the functionality of TALL,
           "Positive Words" = terms_positive,
           "Negative Words" = terms_negative
         )
+      # Pie chart
+      values$sentimentPieChart <- sentimentPieChart(values$docPolarity$sent_overall %>%
+                                                      count(doc_pol_clas) %>%
+                                                      rename("Polarity" = doc_pol_clas))
+      # Density plot
+      values$sentimentDensityPlot <- sentimentDensityPlot(values$docPolarity$sent_overall$sentiment_polarity, from = -1, to = 1)
+      # Box plot
+      values$sentimentBoxPlot <- sentimentBoxPlot(values$docPolarity$sent_overall)
     }
   )
 
   output$d_polPiePlot <- renderPlotly({
     docPolarityEstim()
-    df <- values$docPolarity$sent_overall %>%
-      count(doc_pol_clas) %>%
-      rename("Polarity" = doc_pol_clas)
-    values$sentimentPieChart <- sentimentPieChart(df)
     values$sentimentPieChart
   })
 
   output$d_polDensPlot <- renderPlotly({
     docPolarityEstim()
-    values$sentimentDensityPlot <- sentimentDensityPlot(values$docPolarity$sent_overall$sentiment_polarity, from = -1, to = 1)
     values$sentimentDensityPlot
   })
 
   output$d_polBoxPlot <- renderPlotly({
     docPolarityEstim()
-    values$sentimentBoxPlot <- sentimentBoxPlot(values$docPolarity$sent_overall)
     values$sentimentBoxPlot
   })
 
@@ -4305,6 +4357,11 @@ To ensure the functionality of TALL,
   output$d_polDetPlotNeg <- renderPlotly({
     docPolarityEstim()
     values$docPolPlots$negative
+  })
+
+  output$d_polDet_GeminiUI <- renderUI({
+    values$gemini_model_parameters <- geminiParameterPrompt(values, input$sidebarmenu, input)
+    geminiOutput(title = "Gemini AI", content = values$d_polDet_Gemini, values)
   })
 
 
@@ -4345,7 +4402,10 @@ To ensure the functionality of TALL,
     if (!is.null(values$docPolarityOverallData)) {
       popUp(title = NULL, type = "waiting")
       sheetname <- "PolarityDetection"
-      list_df <- list(values$docPolarityOverallData)
+
+      Gem <- values$d_polDet_Gemini %>% string_to_sentence_df()
+
+      list_df <- list(Gem, values$docPolarityOverallData)
       res <- addDataScreenWb(list_df, wb = values$wb, sheetname = sheetname)
       # values$wb <- res$wb
       owd <- setwd(tempdir())
@@ -4720,4 +4780,69 @@ To ensure the functionality of TALL,
   observeEvent(input$cache, {
     deleteCache()
   })
+
+  ## Choose Working folder in Setting Menu
+  roots <- c(home = homeFolder())
+
+  observe({
+    shinyDirChoose(input, "workingfolder", roots = roots, filetypes = c(""))
+  })
+
+  observeEvent(
+    eventExpr = input$workingfolder,
+    handlerExpr = {
+      wdTall <- parseDirPath(roots = roots, input$workingfolder)
+
+      if (length(wdTall) == 0 || is.null(wdTall)) {
+        if (is.null(wdFolder())) {
+          values$menu <- -2
+        }
+      } else {
+        # setting up the main directory
+        home <- homeFolder()
+        path_tall <- file.path(home, "tall")
+        # check if sub directory exists
+        if (!file.exists(path_tall)) {
+          dir.create(path_tall)
+        }
+        writeLines(wdTall, con = paste0(path_tall, "/tallWD.tall"))
+        if (values$menu == -2) values$menu <- -1
+        values$wdTall <- wdTall
+      }
+    }, ignoreNULL = TRUE
+  )
+
+  output$wdFolder <- renderText({
+    values$wdTall
+  })
+
+  output$apiStatus <- renderUI({
+    if (values$geminiAPI){
+      last <- showGeminiAPI()
+      output$status <- renderText(paste0("✅ API key has been set: ",last))
+    }
+
+  })
+
+  observeEvent(input$set_key, {
+    key <- input$api_key
+    last <- setGeminiAPI(key)
+
+    if (is.na(last)){
+      output$apiStatus <- renderUI({
+        output$status <- renderText(paste0("❌ API key seems tto be not valid"))
+      })
+      values$geminiAPI <- FALSE
+    } else {
+      output$apiStatus <- renderUI({
+        output$status <- renderText(paste0("✅ API key has been set: ",last))
+      })
+      values$geminiAPI <- TRUE
+      home <- homeFolder()
+      path_gemini_key <- paste0(file.path(home, "tall"),"/.gemini_key.txt", collapse="")
+      writeLines(Sys.getenv("GEMINI_API_KEY"), path_gemini_key)
+    }
+
+  })
+
 } # END SERVER

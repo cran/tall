@@ -1,6 +1,6 @@
 Package: tall
 Title: Text Analysis for All
-Version: 0.2.0
+Version: 0.3.0
 Authors@R: c(
     person(given = "Massimo", 
            family = "Aria",
@@ -37,22 +37,25 @@ RoxygenNote: 7.3.2
 URL: https://github.com/massimoaria/tall, https://www.k-synth.com/tall/
 BugReports: https://github.com/massimoaria/tall/issues
 Depends: R (>= 3.5.0), shiny
-Imports: graphics, dplyr (>= 1.1.0), shinyWidgets, shinydashboardPlus,
-        chromote, later, promises, tidyr, purrr, plotly, stringr, Rcpp
-        (>= 1.0.3), RSpectra, rlang, DT, openxlsx, visNetwork, igraph,
-        udpipe, topicmodels, pdftools, textrank, strucchange,
-        sparkline, tidygraph, readxl, readtext, jsonlite, fontawesome,
-        ggraph, ca, shinycssloaders, shinyjs, shinyFiles, readr, curl,
-        pagedown, word2vec, umap, parallel, doParallel
+Imports: base64enc, ca, chromote, curl, doParallel, dplyr (>= 1.1.0),
+        DT, fontawesome, ggraph, graphics, httr2, igraph, jsonlite,
+        later, openxlsx, pagedown, parallel, pdftools, plotly,
+        promises, purrr, Rcpp (>= 1.0.3), readr, readtext, readxl,
+        rlang, RSpectra, shinycssloaders, shinydashboardPlus,
+        shinyFiles, shinyjs, shinyWidgets, sparkline, stringr,
+        strucchange, textrank, tidygraph, tidyr, topicmodels, udpipe,
+        umap, visNetwork, word2vec
 LazyData: true
 LinkingTo: Rcpp
 NeedsCompilation: yes
-Packaged: 2025-04-16 13:45:06 UTC; massimoaria
+Packaged: 2025-06-03 14:45:01 UTC; massimoaria
 Author: Massimo Aria [aut, cre, cph] (0000-0002-8517-9411),
-  Maria Spano [aut] (<https://orcid.org/0000-0002-3103-2342>),
-  Luca D'Aniello [aut] (<https://orcid.org/0000-0003-1019-9212>),
-  Corrado Cuccurullo [ctb] (<https://orcid.org/0000-0002-7401-8575>),
-  Michelangelo Misuraca [ctb] (<https://orcid.org/0000-0002-8794-966X>)
+  Maria Spano [aut] (ORCID: <https://orcid.org/0000-0002-3103-2342>),
+  Luca D'Aniello [aut] (ORCID: <https://orcid.org/0000-0003-1019-9212>),
+  Corrado Cuccurullo [ctb] (ORCID:
+    <https://orcid.org/0000-0002-7401-8575>),
+  Michelangelo Misuraca [ctb] (ORCID:
+    <https://orcid.org/0000-0002-8794-966X>)
 Maintainer: Massimo Aria <aria@unina.it>
 Repository: CRAN
-Date/Publication: 2025-04-16 14:20:02 UTC
+Date/Publication: 2025-06-03 15:10:02 UTC

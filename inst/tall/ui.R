@@ -202,6 +202,7 @@ body <- dashboardBody(
   #### BUTTON STYLE ###############
   tags$style(".glyphicon-refresh {color:#ffffff; font-size: 15px; align: center;}"),
   tags$style(".fa-magnifying-glass {color:#ffffff; font-size: 15px; align: center;}"),
+  tags$style(".fa-microchip {color:#ffffff; font-size: 15px; align: center;}"),
   tags$style(".glyphicon-download-alt {color:#ffffff; font-size: 18px; align: center; margin-left: -3.5px}"),
   tags$style(".glyphicon-play {color:#ffffff; font-size: 18px; align: center;margin-left: -0.5px}"),
   tags$style(".glyphicon-remove {color:#ffffff; font-size: 18px; align: center;margin-left: -0.5px}"),
@@ -1986,6 +1987,19 @@ body <- dashboardBody(
                   column(1)
                 )
               )
+            ),
+            tabPanel(
+              "TALL AI",
+              fluidPage(
+                fluidRow(
+                  column(
+                    12,
+                    br(),
+                    shinycssloaders::withSpinner(htmlOutput("ContextGeminiUI"),
+                                                 color = getOption("spinner.color", default = "#4F7942"))
+                  )
+                )
+              )
             )
           )
         ),
@@ -2425,14 +2439,7 @@ body <- dashboardBody(
                                  step = 1
                     )
                   ),
-                  column(
-                    6
-                    #        ,selectInput("termCA",
-                    #                    "By:",
-                    #                    choices = c("Tokens" = "token",
-                    #                                "Lemma" = "lemma"),
-                    #                    selected = "lemma")
-                  )
+                  column(6)
                 ),
                 fluidRow(
                   column(
@@ -2564,6 +2571,18 @@ body <- dashboardBody(
                   column(1)
                 )
               )
+            ),
+            tabPanel(
+              "TALL AI",
+              fluidPage(
+                fluidRow(
+                  column(12,
+                         br(),
+                         shinycssloaders::withSpinner(htmlOutput("caGeminiUI"),
+                                                      color = getOption("spinner.color", default = "#4F7942"))
+                  )
+                )
+              )
             )
           )
         )
@@ -2616,13 +2635,6 @@ body <- dashboardBody(
               dropdown(
                 h4(strong("Options: ")),
                 hr(),
-                # selectInput(inputId="w_term",
-                #             label = "Terms:",
-                #             choices = c(
-                #               "Tokens"="token",
-                #               "Lemma"="lemma"),
-                #             selected = "lemma"
-                # ),
                 selectInput(
                   inputId = "w_groupNet",
                   label = "Co-occurrences in ",
@@ -2730,6 +2742,17 @@ body <- dashboardBody(
                   column(1)
                 )
               )
+            ),tabPanel(
+              "TALL AI",
+              fluidPage(
+                fluidRow(
+                  column(12,
+                         br(),
+                         shinycssloaders::withSpinner(htmlOutput("w_networkGeminiUI"),
+                                                      color = getOption("spinner.color", default = "#4F7942"))
+                  )
+                )
+              )
             )
           )
         )
@@ -2796,7 +2819,7 @@ body <- dashboardBody(
                     6,
                     numericInput("nMaxTM",
                                  label = "Words",
-                                 value = 500,
+                                 value = 250,
                                  min = 2,
                                  step = 1
                     ),
@@ -2869,6 +2892,18 @@ body <- dashboardBody(
                     HTML(infoTexts$thematicmap)
                   ),
                   column(1)
+                )
+              )
+            ),
+            tabPanel(
+              "TALL AI",
+              fluidPage(
+                fluidRow(
+                  column(12,
+                         br(),
+                         shinycssloaders::withSpinner(htmlOutput("w_networkTMGeminiUI"),
+                                                      color = getOption("spinner.color", default = "#4F7942"))
+                  )
                 )
               )
             )
@@ -3096,6 +3131,18 @@ body <- dashboardBody(
                     HTML(infoTexts$embeddingsimilarity)
                   ),
                   column(1)
+                )
+              )
+            ),
+            tabPanel(
+              "TALL AI",
+              fluidPage(
+                fluidRow(
+                  column(12,
+                         br(),
+                         shinycssloaders::withSpinner(htmlOutput("w_w2vGeminiUI"),
+                                                      color = getOption("spinner.color", default = "#4F7942"))
+                  )
                 )
               )
             )
@@ -3586,6 +3633,18 @@ body <- dashboardBody(
                 column(1)
               )
             )
+          ),
+          tabPanel(
+            "TALL AI",
+            fluidPage(
+              fluidRow(
+                column(12,
+                       br(),
+                       shinycssloaders::withSpinner(htmlOutput("d_tm_GeminiUI"),
+                                                    color = getOption("spinner.color", default = "#4F7942"))
+                )
+              )
+            )
           )
         )
       )
@@ -3712,6 +3771,18 @@ body <- dashboardBody(
                     HTML(infoTexts$polaritydetection)
                   ),
                   column(1)
+                )
+              )
+            ),
+            tabPanel(
+              "TALL AI",
+              fluidPage(
+                fluidRow(
+                  column(12,
+                         br(),
+                         shinycssloaders::withSpinner(htmlOutput("d_polDet_GeminiUI"),
+                                                      color = getOption("spinner.color", default = "#4F7942"))
+                  )
                 )
               )
             )
@@ -3927,16 +3998,32 @@ body <- dashboardBody(
         ),
         fluidRow(column(
           6,
-          h3("Select a folder where the analysis outputs will be saved"),
+          h3("Working Folder"),
+          h4("Select a folder where the analysis outputs will be saved"),
           br(),
-          shinyDirButton("workingfolder", "Select a Working Folder", "Select"),
+          shinyDirButton("workingfolder", "Select a Working Folder", "Select", style = "color:white;"),
           br(),
           textOutput("wdFolder"),
           hr(),
+          h3("Language Models"),
           actionButton(
             inputId = "cache",
-            label = "Clean temporary folder"
-          )
+            style = "color:white;",
+            label = "Clean model folder"
+          ),
+          hr(),
+          h3("TALL AI Api Key"),
+          h4("Set a valid API Key to use TALL AI features powered by Google Gemini."),
+          h5(HTML(
+            'If you don’t have one yet, you can generate it by logging into <a href="https://aistudio.google.com/app/apikey" target="_blank">https://aistudio.google.com/app/apikey</a> with your Google account and creating a new API Key.'
+          )),
+          br(),
+          passwordInput("api_key", "Enter your Gemini API Key:", ""),
+          actionButton("set_key", "Set API Key",style = "color:white;",),
+          br(),
+          uiOutput("apiStatus"),
+          #textOutput("status", )
+
           # sliderTextInput(
           #   inputId = "dpi",
           #   label = "Please select the desired DPI",
