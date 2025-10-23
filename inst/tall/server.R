@@ -14,44 +14,9 @@ options(shiny.maxRequestSize = maxUploadSize * 1024^2)
 param_stay_page <- FALSE
 
 server <- function(input, output, session) {
-  if (inherits(try(pagedown::find_chrome(), silent = T), "try-error")) {
-    Chrome_url <- NULL
-  } else {
-    Chrome_url <- pagedown::find_chrome()
-  }
 
-  #  Sys.setenv (CHROMOTE_CHROME = Chrome_url)
-
-  ## chrome configuration for shinyapps server
-
-  if (identical(Sys.getenv("R_CONFIG_ACTIVE"), "shinyapps")) {
-    chromote::set_default_chromote_object(
-      chromote::Chromote$new(chromote::Chrome$new(
-        args = c(
-          "--disable-gpu",
-          "--no-sandbox",
-          "--disable-dev-shm-usage", # required bc the target easily crashes
-          c("--force-color-profile", "srgb")
-        )
-      ))
-    )
-  }
-  ## end configuration
-
-  ## Check if Chrome browser is installed on the computer
-  if (is.null(Chrome_url)) {
-    showModal(modalDialog(
-      title = strong("Warning message!"),
-      HTML("Chrome or a Chromium-based browser is not installed on your computer.<br>
-If you do not have either of these browsers installed, TALL will be unable to export graphs.<br>
-To ensure the functionality of TALL,
-           please download Chrome by <a href='https://www.google.com/chrome/' target='_blank' > <b>clicking here</b></a>."),
-      footer = modalButton("Dismiss"),
-      easyClose = TRUE
-    ))
-  } else {
-    Sys.setenv(CHROMOTE_CHROME = Chrome_url)
-  }
+  ## suppress warnings
+  options(warn = -1)
 
   ## Code to reset shiny app
   reset_rv <- reactiveVal(value = 0L)
@@ -106,20 +71,22 @@ To ensure the functionality of TALL,
 
   ## observe Gemini copy2clipboard button
   observeEvent(input$copy_btn, {
-    content <- geminiSave(values, input$sidebarmenu, type="clip")
+    content <- geminiSave(values, input$sidebarmenu)
     copy_to_clipboard(content)
   })
 
-  ## observe Gemini Save button
+  # ## observe Gemini Save button
   observeEvent(input$save_btn, {
-    geminiSave(values, input$sidebarmenu, type="save")
+    filename <- paste0(values$wdTall,"/TallAI_",input$sidebarmenu,".txt")
+    txtOutput <- geminiSave(values, input$sidebarmenu)
+    readr::write_lines(txtOutput, file=filename)
   })
 
   ## observe gemini generate button
   observeEvent(input$gemini_btn, {
     values$gemini_additional <- input$gemini_additional ## additional info to Gemini prompt
     values <- geminiWaitingMessage(values, input$sidebarmenu)
-    values <- geminiGenerate(values, input$sidebarmenu, values$gemini_additional,values$gemini_model_parameters)
+    values <- geminiGenerate(values, input$sidebarmenu, values$gemini_additional,values$gemini_model_parameters, input)
   })
 
   ## suppress summarise message
@@ -358,6 +325,7 @@ To ensure the functionality of TALL,
           inputId = "corpus_description",
           label = "Please provide a brief description of your corpus (e.g., source, type of content, domain) to improve prompts for the TALL AI Assistant:",
           placeholder = "Example: The corpus consists of 150 academic articles from biomedical journals published between 2015 and 2020...",
+          value = values$corpus_description,
           rows = 8,
           width = "100%"
         ),
@@ -382,6 +350,10 @@ To ensure the functionality of TALL,
     }
   })
 
+  observeEvent(input$runImport,{
+    values$corpus_description <- input$corpus_description
+    updateTextAreaInput(session, "corpus_description", value = values$corpus_description)
+  })
 
   observeEvent(input$runReset2, {
     ask_confirmation(
@@ -621,7 +593,7 @@ To ensure the functionality of TALL,
 
   output$dataImported <- DT::renderDT({
     DATAloading()
-    if (values$menu == 0) {
+    # if (values$menu == 0) {
       DTformat(
         values$txt %>%
           filter(doc_selected) %>%
@@ -630,7 +602,7 @@ To ensure the functionality of TALL,
           select(-doc_selected, -text_original),
         left = 3, nrow = 5, filter = "none", button = TRUE, delete = TRUE
       )
-    }
+    # }
   })
 
   observeEvent(eventExpr = {
@@ -1670,7 +1642,6 @@ To ensure the functionality of TALL,
   })
 
   ## PoS Tag Selection ----
-
   observe({
     output$posTagListsUI <- renderUI({
       checkboxGroupInput("posTagLists",
@@ -2190,6 +2161,11 @@ To ensure the functionality of TALL,
 
   output$overviewData <- renderDT(server = FALSE, {
     DTformat(values$VbData, nrow = nrow(values$VbData), left = 1, right = 2, numeric = 2, pagelength = FALSE, dom = FALSE, size = "110%", filename = "Overview")
+  })
+
+  output$OverviewGeminiUI <- renderUI({
+    values$gemini_model_parameters <- geminiParameterPrompt(values, input$sidebarmenu, input)
+    geminiOutput(title = "Gemini AI", content = values$overviewGemini, values)
   })
 
   ## Report
@@ -4431,8 +4407,91 @@ To ensure the functionality of TALL,
     }
   })
 
+  ## Abstractive Summarization ----
 
-  ## Summarization ----
+  output$optionsAbstractive <- renderUI({
+    selectizeInput(
+      inputId = "Abst_document_selection",
+      label = "Select Document",
+      choices = values$dfTag %>% dplyr::filter(docSelected) %>% select(doc_id) %>% unique() %>% pull(doc_id),
+      multiple = FALSE,
+      width = "100%"
+    )
+  })
+
+  output$abstractivePromptUI <- renderUI({
+    textAreaInput(
+      inputId = "abstractivePrompt",
+      label = "Provide any additional prompts for the AI Assistant:",
+      placeholder = "Example: Provide the summary in bullet points; or Provide the summary in Italian language; etc.",
+      value = values$abstractivePrompt,
+      rows = 8,
+      width = "100%"
+    )
+  })
+
+  observeEvent(input$d_abstractiveApply,{
+    values$abstractivePrompt <- input$abstractivePrompt
+  })
+
+  abstractiveSummarization <- eventReactive(
+    ignoreNULL = TRUE,
+    eventExpr = {
+      input$d_abstractiveApply
+    },
+    valueExpr = {
+      values$abstractiveSumm <- abstractive_summary(values,
+                                                    input = input,
+                                                    id = input$Abst_document_selection,
+                                                    nL = input$summaryLength,
+                                                    api_key=NULL,
+                                                    model = values$gemini_api_model)
+    }
+  )
+
+  output$summaryData <- renderUI({
+    abstractiveSummarization()
+    div(
+      id = "typing-box",
+      style = "white-space: pre-wrap; background-color:#f9f9f9; padding:15px; border:1px solid #ccc; border-radius:5px; max-height:700px; overflow-y: auto;",
+      HTML(values$abstractiveSumm)
+    )
+
+  })
+
+  output$documentData2 <- renderUI({
+    abstractiveSummarization()
+    div(
+      id = "typing-box",
+      style = "white-space: pre-wrap; background-color:#f9f9f9; padding:15px; border:1px solid #ccc; border-radius:5px; max-height:700px; overflow-y: auto;",
+      HTML(values$dfTag %>%
+             filter(doc_id == !!input$Abst_document_selection) %>%
+             rebuild_documents() %>% pull(text) %>% paste(collapse = "<br>")
+      )
+    )
+  })
+
+  ## Report
+
+  observeEvent(input$d_astractiveReport, {
+    if (!is.null(values$abstractiveSumm)) {
+      popUp(title = NULL, type = "waiting")
+      sheetname <- "AbstractiveSummarization"
+
+      list_df <- list(
+        data.frame(Abstract = paste0("Document: ",input$Abst_document_selection,
+                                     "\n\n Abstract:\n\n",values$abstractiveSumm))
+      )
+      res <- addDataScreenWb(list_df, wb = values$wb, sheetname = sheetname)
+      # values$wb <- res$wb
+      popUp(title = "Summarization Results", type = "success")
+      values$myChoices <- sheets(values$wb)
+    } else {
+      popUp(type = "error")
+    }
+  })
+
+  ## Extractive Summarization ----
 
   output$optionsUnitSummarization <- renderUI({
     selectInput(
@@ -4517,7 +4576,7 @@ To ensure the functionality of TALL,
   observeEvent(input$d_summarizationReport, {
     if (!is.null(values$docExtraction$sentences)) {
       popUp(title = NULL, type = "waiting")
-      sheetname <- "Summarization"
+      sheetname <- "ExtractiveSummarization"
 
       values$docExtraction$abstractData <- data.frame("Abstract" = values$docExtraction$abstract)
       values$docExtraction$abstractData <- values$docExtraction$abstractData %>%
@@ -4634,6 +4693,30 @@ To ensure the functionality of TALL,
   ## SETTINGS ----
 
   ## UTILITY ----
+
+  observeEvent(input$d_abstractiveView, {
+    showModal(showDocumentAbstractiveModal(session))
+  })
+
+  showDocumentAbstractiveModal <- function(session) {
+    ns <- session$ns
+    modalDialog(
+      div(
+        style = "height: 550px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px; background-color: #f9f9f9;",
+        h3(strong(("Document corpus"))),
+        br(),
+        HTML(values$dfTag %>%
+               filter(doc_id == !!input$Abst_document_selection) %>%
+               rebuild_documents() %>% pull(text) %>% paste(collapse = "<br>")
+        ),
+        size = "l",
+        easyClose = TRUE,
+        footer = tagList(
+          modalButton("Close")
+        )
+      )
+    )
+  }
 
   observeEvent(input$d_summarizationView, {
     showModal(showDocumentSummarizationModal(session))
@@ -4821,28 +4904,138 @@ To ensure the functionality of TALL,
       last <- showGeminiAPI()
       output$status <- renderText(paste0("✅ API key has been set: ",last))
     }
-
   })
+
+  output$geminiOutputSize <- renderUI({
+    list(
+      selectInput(
+        inputId = "gemini_output_size",
+        label = "Max Output (in tokens)",
+        selected = ifelse(is.null(values$gemini_output_size), "medium", values$gemini_output_size),
+        choices = c("Medium" = "medium", "Large" = "large")
+      ),
+      conditionalPanel(
+        condition = "input.gemini_output_size == 'medium'",
+        helpText(strong("Free Tier Output:")),
+        helpText(em("Medium -> 16384 Tokens"))
+      ),
+      conditionalPanel(
+        condition = "input.gemini_output_size == 'large'",
+        helpText(strong("Free Tier Output:")),
+        helpText(em("Large -> 32768 Tokens"))
+      )
+    )
+  })
+
+  output$geminiModelChoice <- renderUI({
+    list(
+      selectInput(
+        inputId = "gemini_api_model",
+        label = "Select the Gemini Model",
+        choices = c(
+          "Gemini 2.5 Flash" = "2.5-flash",
+          "Gemini 2.5 Flash Lite" = "2.5-flash-lite",
+          "Gemini 2.0 Flash" = "2.0-flash",
+          "Gemini 2.0 Flash Lite" = "2.0-flash-lite",
+          "Gemini 1.5 Flash" = "1.5-flash",
+          "Gemini 1.5 Flash Lite" = "1.5-flash-8b"
+        ),
+        selected = ifelse(is.null(values$gemini_api_model), "2.0-flash", values$gemini_api_model)
+      ),
+      conditionalPanel(
+        condition = "input.gemini_api_model == '2.5-flash'",
+        helpText(strong("Free Tier Rate Limits:")),
+        helpText(em("Request per Minutes: 10", tags$br(),
+                    "Requests per Day: 500", tags$br(),
+                    "Latency time: High"))
+      ),
+      conditionalPanel(
+        condition = "input.gemini_api_model == '2.5-flash-lite'",
+        helpText(strong("Free Tier Rate Limits:")),
+        helpText(em("Request per Minutes: 15", tags$br(),
+                    "Requests per Day: 500", tags$br(),
+                    "Latency time: Low"))
+      ),
+      conditionalPanel(
+        condition = "input.gemini_api_model == '2.0-flash-lite'",
+        helpText(strong("Free Tier Rate Limits:")),
+        helpText(em("Request per Minutes: 30", tags$br(),
+                    "Requests per Day: 1500",tags$br(),
+                    "Latency time: Low"))
+      ),
+      conditionalPanel(
+        condition = "input.gemini_api_model == '2.0-flash'",
+        helpText(strong("Free Tier Rate Limits:")),
+        helpText(em("Request per Minutes: 15", tags$br(),
+                    "Requests per Day: 1500",tags$br(),
+                    "Latency time: Medium"))
+      ),
+      conditionalPanel(
+        condition = "input.gemini_api_model == '1.5-flash'",
+        helpText(strong("Free Tier Rate Limits:")),
+        helpText(em("Request per Minutes: 15", tags$br(),
+                    "Requests per Day: 1500",tags$br(),
+                    "Latency time: Medium"))
+      ),
+      conditionalPanel(
+        condition = "input.gemini_api_model == '1.5-flash-8b'",
+        helpText(strong("Free Tier Rate Limits:")),
+        helpText(em("Request per Minutes: 15", tags$br(),
+                    "Requests per Day: 1500",tags$br(),
+                    "Latency time: Low"))
+      )
+    )
+  })
+
+  observeEvent(input$gemini_api_model, {
+    if (!is.null(input$gemini_api_model)){
+      saveGeminiModel(model=c(input$gemini_api_model,input$gemini_output_model), file=paste0(homeFolder(),"/.tall_gemini_model.txt", collapse=""))
+      values$gemini_api_model <- input$gemini_api_model
+      values$gemini_output_size <- input$gemini_output_size
+    }
+  })
+
+  observeEvent(input$gemini_output_size, {
+    if (!is.null(input$gemini_output_size)){
+      saveGeminiModel(model=c(input$gemini_api_model,input$gemini_output_size), file=paste0(homeFolder(),"/.tall_gemini_model.txt", collapse=""))
+      values$gemini_api_model <- input$gemini_api_model
+      values$gemini_output_size <- input$gemini_output_size
+    }
+  })
+
 
   observeEvent(input$set_key, {
     key <- input$api_key
     last <- setGeminiAPI(key)
 
-    if (is.na(last)){
+    if (!last$valid){
       output$apiStatus <- renderUI({
-        output$status <- renderText(paste0("❌ API key seems tto be not valid"))
+        output$status <- renderText(last$message)
       })
       values$geminiAPI <- FALSE
     } else {
       output$apiStatus <- renderUI({
-        output$status <- renderText(paste0("✅ API key has been set: ",last))
+        output$status <- renderText(paste0("✅ API key has been set: ",last$message))
       })
       values$geminiAPI <- TRUE
       home <- homeFolder()
-      path_gemini_key <- paste0(file.path(home, "tall"),"/.gemini_key.txt", collapse="")
+      path_gemini_key <- paste0(home,"/tall/.tall_gemini_key.txt", collapse="")
       writeLines(Sys.getenv("GEMINI_API_KEY"), path_gemini_key)
     }
 
   })
+
+  observeEvent(input$remove_key, {
+    if (values$geminiAPI){
+      home <- homeFolder()
+      path_gemini_key <- paste0(home,"/tall/.tall_gemini_key.txt", collapse="")
+      file.remove(path_gemini_key)
+      values$geminiAPI <- FALSE
+      output$apiStatus <- renderUI({
+        output$status <- renderText(paste0("❌ API key has been removed"))
+      })
+    }
+  })
+
 
 } # END SERVER

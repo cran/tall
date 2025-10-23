@@ -1,6 +1,6 @@
 Package: tall
 Title: Text Analysis for All
-Version: 0.3.0
+Version: 0.4.0
 Authors@R: c(
     person(given = "Massimo", 
            family = "Aria",
@@ -33,22 +33,22 @@ Description: An R 'shiny' app designed for diverse text analysis tasks, offering
              'tall' features a comprehensive workflow, including data cleaning, preprocessing, statistical analysis, and visualization, all integrated for effective text analysis.
 License: MIT + file LICENSE
 Encoding: UTF-8
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3
 URL: https://github.com/massimoaria/tall, https://www.k-synth.com/tall/
 BugReports: https://github.com/massimoaria/tall/issues
 Depends: R (>= 3.5.0), shiny
-Imports: base64enc, ca, chromote, curl, doParallel, dplyr (>= 1.1.0),
-        DT, fontawesome, ggraph, graphics, httr2, igraph, jsonlite,
-        later, openxlsx, pagedown, parallel, pdftools, plotly,
-        promises, purrr, Rcpp (>= 1.0.3), readr, readtext, readxl,
-        rlang, RSpectra, shinycssloaders, shinydashboardPlus,
-        shinyFiles, shinyjs, shinyWidgets, sparkline, stringr,
-        strucchange, textrank, tidygraph, tidyr, topicmodels, udpipe,
-        umap, visNetwork, word2vec
+Imports: base64enc, ca, chromote, curl (>= 6.3.0), doParallel, dplyr
+        (>= 1.1.0), DT, fontawesome, ggraph, graphics, httr2, igraph,
+        jsonlite, later, openxlsx, pagedown, parallel, pdftools (>=
+        3.6.0), plotly, promises, purrr, Rcpp (>= 1.0.3), readr,
+        readtext, readxl, rlang, RSpectra, shinycssloaders (>= 1.1.0),
+        shinydashboardPlus, shinyFiles, shinyjs, shinyWidgets,
+        sparkline, stringr, strucchange, textrank, tidygraph, tidyr,
+        topicmodels, udpipe, umap, visNetwork, word2vec
 LazyData: true
 LinkingTo: Rcpp
 NeedsCompilation: yes
-Packaged: 2025-06-03 14:45:01 UTC; massimoaria
+Packaged: 2025-10-23 16:00:34 UTC; massimoaria
 Author: Massimo Aria [aut, cre, cph] (0000-0002-8517-9411),
   Maria Spano [aut] (ORCID: <https://orcid.org/0000-0002-3103-2342>),
   Luca D'Aniello [aut] (ORCID: <https://orcid.org/0000-0003-1019-9212>),
@@ -58,4 +58,4 @@ Author: Massimo Aria [aut, cre, cph] (0000-0002-8517-9411),
     <https://orcid.org/0000-0002-8794-966X>)
 Maintainer: Massimo Aria <aria@unina.it>
 Repository: CRAN
-Date/Publication: 2025-06-03 15:10:02 UTC
+Date/Publication: 2025-10-23 16:10:02 UTC

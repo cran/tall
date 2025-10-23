@@ -28,6 +28,8 @@ is_online <- function() {
 }
 
 ## clean raw text before apply tokenization ----
+
+
 clean_text <- function(df, text_column = "text",
                        add_space = TRUE,
                        remove_quotes = TRUE,
@@ -38,13 +40,10 @@ clean_text <- function(df, text_column = "text",
                        )) {
   # Improved emoji regex pattern to capture Unicode emojis
   EMOJI <- "[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F700-\U0001F77F\U0001F780-\U0001F7FF\U0001F800-\U0001F8FF\U0001F900-\U0001F9FF\U0001FA00-\U0001FA6F\U0001FA70-\U0001FAFF\U00002702-\U000027B0\U000024C2-\U0001F251]"
-
   # Sort punctuation marks by length (longest first) to prioritize sequences
   punctuation_marks <- punctuation_marks[order(nchar(punctuation_marks), decreasing = TRUE)]
-
   # Escape special regex characters
   punctuation_marks <- sapply(punctuation_marks, function(x) gsub("([\\^$.|?*+(){}])", "\\\\\\1", x))
-
   # Create a regex pattern for punctuation sequences
   punctuation_regex <- paste0("(", paste0(punctuation_marks, collapse = "|"), ")")
 
@@ -54,12 +53,16 @@ clean_text <- function(df, text_column = "text",
         text_cleaned <- stringr::str_replace_all(.data[[text_column]], '[\"]', "") # Remove quotes
         text_cleaned <- stringr::str_replace_all(text_cleaned, punctuation_regex, " \\1 ") # Add spaces around punctuation
         text_cleaned <- stringr::str_replace_all(text_cleaned, EMOJI, " \\0 ") # Add spaces around emojis
-        stringr::str_squish(text_cleaned) # Remove extra spaces
+        # Remove extra spaces but preserve newlines
+        text_cleaned <- stringr::str_replace_all(text_cleaned, "[ \t]+", " ") # Replace multiple spaces/tabs with single space
+        stringr::str_replace_all(text_cleaned, "[ \t]*\n[ \t]*", "\n") # Clean spaces around newlines
       },
       add_space ~ {
         text_cleaned <- stringr::str_replace_all(.data[[text_column]], punctuation_regex, " \\1 ")
         text_cleaned <- stringr::str_replace_all(text_cleaned, EMOJI, " \\0 ")
-        stringr::str_squish(text_cleaned)
+        # Remove extra spaces but preserve newlines
+        text_cleaned <- stringr::str_replace_all(text_cleaned, "[ \t]+", " ") # Replace multiple spaces/tabs with single space
+        stringr::str_replace_all(text_cleaned, "[ \t]*\n[ \t]*", "\n") # Clean spaces around newlines
       },
       remove_quotes ~ {
         stringr::str_replace_all(.data[[text_column]], '[\"|\']', "")
@@ -138,7 +141,7 @@ read_files <- function(files, ext = c("txt", "csv", "xlsx", "pdf"), subfolder = 
          txt = {
            ## detect text encoding for each file
            df <- readtext(file)
-           encod <- suppressMessages(encoding(df, verbose = FALSE)$all)
+           encod <- suppressMessages(readtext::encoding(df, verbose = FALSE)$all)
            ## read txt files using the right encoding
            df <- data.frame(doc_id = doc_id, text = NA, folder = folder, file = file, encod = encod) %>%
              group_by(doc_id) %>%
@@ -171,7 +174,7 @@ read_files <- function(files, ext = c("txt", "csv", "xlsx", "pdf"), subfolder = 
            for (i in seq_len(length(file))) {
              # listdf[[i]] <- readtext::readtext(file[i], fill=TRUE, text_field="text", quote='"') %>%
              #   mutate(doc_id = doc_id[i])
-             listdf[[i]] <- data.frame(text = pdf2txt(file[i]), filename = doc_id[i])
+             listdf[[i]] <- data.frame(text = pdf2txt_auto(file[i]), filename = doc_id[i])
            }
            df <- do.call(rbind, listdf)
          }
@@ -199,32 +202,312 @@ read_files <- function(files, ext = c("txt", "csv", "xlsx", "pdf"), subfolder = 
   return(df)
 }
 
-## pdf to txt ----
-pdf2txt <- function(file) {
-  if (!poppler_config()$has_pdf_data) {
-    message("Pdf import feature requires a recent version of libpoppler. Please install it. ")
-    return(NA)
+## PDF to TEXT ----
+pdf2txt_multicolumn_safe <- function(file, column_threshold = NULL, preserve_structure = TRUE) {
+  # Check compatibility for poppler_config
+  has_poppler_config <- exists("poppler_config", where = asNamespace("pdftools"), mode = "function")
+
+  if (has_poppler_config) {
+    if (!pdftools::poppler_config()$has_pdf_data) {
+      message("Pdf import feature requires a recent version of libpoppler. Please install it.")
+      return(NA)
+    }
   }
 
-  # 1. Estrazione di tutto il testo
+  # Try using pdf_data to handle multi-column documents
+  tryCatch({
+    # Extract data with positions
+    data_list <- pdftools::pdf_data(file)
 
-  pages <- pdftools::pdf_length(file)
+    all_text <- c()
 
-  txt <- pdftools::pdf_text(file)
+    for (page_num in seq_along(data_list)) {
+      page_data <- data_list[[page_num]]
 
-  # remove \n at the end of the rows
-  txt <- gsub("(?<![\\s\\.])\\n(?!\\s)", " ", txt, perl = TRUE)
+      if (nrow(page_data) == 0) next
 
-  # remove word sep -
-  txt <- gsub("-\\s", "", txt)
+      # Automatically determine column threshold if not specified
+      if (is.null(column_threshold)) {
+        # Analyze distribution of x positions to detect multiple columns
+        x_positions <- page_data$x
 
-  # replace \n and spaces with \n\n
-  txt <- gsub("\n  ", "\n\n", txt)
+        # If there are enough different positions, try to detect multiple columns
+        if (length(unique(x_positions)) > 20) {
+          # Use clustering to identify potential columns
+          tryCatch({
+            clusters <- kmeans(x_positions, centers = 2, nstart = 10)
+            cluster_centers <- sort(clusters$centers[,1])
 
-  txt <- paste(txt, collapse = " ")
+            # Use midpoint between cluster centers as threshold
+            column_threshold <- mean(cluster_centers)
+          }, error = function(e) {
+            # If clustering fails, use page midpoint
+            column_threshold <- (max(page_data$x) + min(page_data$x)) / 2
+          })
+        } else {
+          # For documents with few different x positions, use page midpoint
+          column_threshold <- (max(page_data$x) + min(page_data$x)) / 2
+        }
+      }
 
-  return(txt)
+      # Separate columns based on x position
+      left_column <- page_data[page_data$x < column_threshold, ]
+      right_column <- page_data[page_data$x >= column_threshold, ]
+
+      # Check if there are actually two significant columns
+      if (nrow(left_column) < 5 || nrow(right_column) < 5) {
+        # Probably single-column document, treat everything together
+        page_data <- page_data[order(page_data$y, page_data$x), ]
+        page_text <- reconstruct_text_structured(page_data, preserve_structure)
+      } else {
+        # Sort by y (top to bottom) and then by x within each column
+        left_column <- left_column[order(left_column$y, left_column$x), ]
+        right_column <- right_column[order(right_column$y, right_column$x), ]
+
+        # Reconstruct text for each column maintaining structure
+        left_text <- reconstruct_text_structured(left_column, preserve_structure)
+        right_text <- reconstruct_text_structured(right_column, preserve_structure)
+
+        # Combine columns
+        if (preserve_structure) {
+          page_text <- paste(left_text, right_text, sep = "\n\n")
+        } else {
+          page_text <- paste(left_text, right_text, sep = " ")
+        }
+      }
+
+      all_text <- c(all_text, page_text)
+    }
+
+    # Final post-processing
+    if (preserve_structure) {
+      txt <- paste(all_text, collapse = "\n\n")
+
+      # Improve detection of paragraphs and sections
+      # Identify numbered titles like "1. Introduction", "2.1. Internal processing"
+      txt <- gsub("([0-9]+(?:\\.[0-9]+)*\\.\\s+[A-Z][A-Za-z\\s]{3,50})", "\n\n\\1", txt)
+
+      # Identify isolated uppercase sections
+      txt <- gsub("\\s+([A-Z][A-Z\\s]{10,60})\\s+", "\n\n\\1\n\n", txt)
+
+      # Separate paragraphs after complete sentences
+      txt <- gsub("([.!?])\\s+([A-Z][a-z])", "\\1\n\n\\2", txt)
+
+      # Clean triple \n
+      txt <- gsub("\\n{3,}", "\n\n", txt)
+
+    } else {
+      txt <- paste(all_text, collapse = " ")
+    }
+
+    # Remove line-ending hyphens but preserve structure
+    txt <- gsub("-\\s*\n", "", txt)
+    txt <- gsub("-\\s+", "", txt)
+
+    # Normalize spaces
+    if (preserve_structure) {
+      txt <- gsub("[ \t]+", " ", txt)      # Normalize spaces and tabs
+      txt <- gsub("\\n ", "\n", txt)       # Remove spaces after \n
+    } else {
+      txt <- gsub("\\s+", " ", txt)
+    }
+
+    # Remove leading and trailing spaces
+    txt <- trimws(txt)
+
+    return(txt)
+
+  }, error = function(e) {
+    message("pdf_data failed, falling back to pdf_text method: ", e$message)
+
+    # Fallback to original function with structural improvements
+    pages <- pdftools::pdf_length(file)
+    txt <- pdftools::pdf_text(file)
+
+    if (preserve_structure) {
+      # Improve structure preservation in fallback
+      # Identify numbered titles
+      txt <- gsub("([0-9]+(?:\\.[0-9]+)*\\.\\s+[A-Z][A-Za-z\\s]{3,50})", "\n\n\\1", txt)
+
+      # Preserve existing paragraphs
+      txt <- gsub("\\n\\s*\\n", "\n\n", txt)
+
+      # Separate sentences into new paragraphs when appropriate
+      txt <- gsub("([.!?])\\s*\n\\s*([A-Z])", "\\1\n\n\\2", txt)
+
+      # Remove \n that are not at sentence endings but preserve structure
+      txt <- gsub("(?<![.!?\\n])\\n(?![A-Z0-9\\n])", " ", txt, perl = TRUE)
+
+      # Combine pages
+      txt <- paste(txt, collapse = "\n\n")
+
+    } else {
+      # Original version
+      txt <- gsub("(?<![\\s\\.])\\n(?!\\s)", " ", txt, perl = TRUE)
+      txt <- gsub("\n  ", "\n\n", txt)
+      txt <- paste(txt, collapse = " ")
+    }
+
+    # Remove word separation hyphens
+    txt <- gsub("-\\s", "", txt)
+
+    return(txt)
+  })
 }
+
+# Simplified helper function that doesn't use non-existent columns
+reconstruct_text_structured <- function(column_data, preserve_structure = TRUE) {
+  if (nrow(column_data) == 0) return("")
+
+  # Group words by line based on similar y positions
+  tolerance <- 4
+  column_data$line <- round(column_data$y / tolerance) * tolerance
+
+  # Check which columns actually exist
+  available_cols <- names(column_data)
+
+  # Use only available information to identify structures
+  if ("height" %in% available_cols) {
+    column_data$font_size <- column_data$height
+  } else {
+    column_data$font_size <- 12  # default
+  }
+
+  # Split data by line
+  lines <- split(column_data, column_data$line)
+
+  # Reconstruct each line
+  line_results <- lapply(lines, function(line) {
+    line <- line[order(line$x), ]  # Sort by x position
+
+    # Reconstruct line text
+    line_text <- paste(line$text, collapse = " ")
+    line_text <- trimws(line_text)
+
+    # Line characteristics to identify titles/special structures
+    avg_font_size <- mean(line$font_size, na.rm = TRUE)
+    is_short <- nchar(line_text) < 80
+    is_caps <- grepl("^[A-Z\\s\\d\\.\\-]+$", line_text)
+    starts_with_number <- grepl("^\\d+\\.", line_text)
+    starts_with_section <- grepl("^\\d+\\.\\d+", line_text)
+
+    # Identify potential titles or special structures
+    is_title <- (is_short && (is_caps || starts_with_number || starts_with_section))
+
+    return(list(
+      text = line_text,
+      y = min(line$y),
+      is_title = is_title,
+      font_size = avg_font_size,
+      starts_with_number = starts_with_number
+    ))
+  })
+
+  # Remove empty lines
+  line_results <- line_results[sapply(line_results, function(x) nchar(x$text) > 0)]
+
+  # Sort lines from top to bottom
+  line_results <- line_results[order(sapply(line_results, function(x) x$y))]
+
+  if (!preserve_structure) {
+    # Simple mode: join everything with spaces
+    result <- paste(sapply(line_results, function(x) x$text), collapse = " ")
+  } else {
+    # Structured mode: preserve paragraphs and titles
+    result_parts <- c()
+
+    for (i in seq_along(line_results)) {
+      current_line <- line_results[[i]]
+      line_text <- current_line$text
+
+      if (nchar(line_text) == 0) next
+
+      # Add appropriate separators
+      if (i == 1) {
+        # First line
+        result_parts <- c(result_parts, line_text)
+      } else {
+        prev_line <- line_results[[i-1]]
+
+        # Determine separator type
+        if (current_line$is_title) {
+          # Titles: double \n before
+          result_parts <- c(result_parts, "\n\n", line_text)
+        } else if (prev_line$is_title) {
+          # After a title: double \n
+          result_parts <- c(result_parts, "\n\n", line_text)
+        } else if (grepl("[.!?]\\s*$", prev_line$text) &&
+                   grepl("^[A-Z]", line_text) &&
+                   !grepl("^[A-Z][a-z]+\\s+[a-z]", line_text)) {
+          # End of sentence + start with capital (but not normal continuation)
+          result_parts <- c(result_parts, "\n\n", line_text)
+        } else {
+          # Continuation: single space
+          result_parts <- c(result_parts, " ", line_text)
+        }
+      }
+    }
+
+    result <- paste(result_parts, collapse = "")
+
+    # Post-processing to improve structure
+    result <- gsub("\\s+", " ", result)              # Normalize spaces
+    result <- gsub("\\n\\s+", "\n", result)          # Remove spaces after \n
+    result <- gsub("\\n{3,}", "\n\n", result)        # Max 2 consecutive \n
+  }
+
+  result <- trimws(result)
+  return(result)
+}
+
+# Automatic wrapper function
+pdf2txt_auto <- function(file, preserve_structure = TRUE) {
+  # First try multi-column method
+  result <- pdf2txt_multicolumn_safe(file, preserve_structure = preserve_structure)
+
+  # If result seems malformed, try original method
+  if (is.na(result) || nchar(result) < 100) {
+    message("Multi-column method failed or returned short text, trying original method...")
+
+    # Complete fallback to original method with improvements
+    tryCatch({
+      pages <- pdftools::pdf_length(file)
+      txt <- pdftools::pdf_text(file)
+
+      if (preserve_structure) {
+        # Better structure preservation in fallback
+        # Identify numbered titles
+        txt <- gsub("([0-9]+(?:\\.[0-9]+)*\\.\\s+[A-Za-z][A-Za-z\\s]{3,50})", "\n\n\\1\n\n", txt, perl = TRUE)
+
+        # Preserve existing paragraphs
+        txt <- gsub("\\n\\s*\\n", "\n\n", txt)
+
+        # Separate sentences into paragraphs when they start with capital
+        txt <- gsub("([.!?])\\s*\n\\s*([A-Z][a-z])", "\\1\n\n\\2", txt, perl = TRUE)
+
+        # Remove internal \n but preserve structure
+        txt <- gsub("(?<![.!?\\n])\\n(?![A-Z0-9\\n])", " ", txt, perl = TRUE)
+
+        txt <- paste(txt, collapse = "\n\n")
+      } else {
+        txt <- gsub("(?<![\\s\\.])\\n(?!\\s)", " ", txt, perl = TRUE)
+        txt <- gsub("\n  ", "\n\n", txt)
+        txt <- paste(txt, collapse = " ")
+      }
+
+      txt <- gsub("-\\s", "", txt)
+      return(txt)
+
+    }, error = function(e) {
+      message("All methods failed: ", e$message)
+      return(NA)
+    })
+  }
+
+  return(result)
+}
+
+## Remove HTML TAGS ----
 
 removeHTMLTags <- function(text) {
   text <- text %>%
@@ -533,6 +816,115 @@ tall_download_model <- function(
 
 ## Tagging Special Entites ----
 
+# TaggingCorpusElements <- function(x) {
+#   if ("upos_specialentities" %in% names(x)) {
+#     x <- resetSpecialEntities(x)
+#   } else {
+#     x$upos_specialentities <- x$upos
+#   }
+#
+#   regexList <- c(
+#     EMAIL = "(?i)([_+a-z0-9-]+(\\.[_+a-z0-9-]+)*@[a-z0-9-]+(\\.[a-z0-9-]+)*(\\.[a-z]{2,14}))",
+#     URL = "(?<!@)\\b(https?://[\\w.-]+\\.[a-z]{2,6}(/[\\S]*)?|[\\w.-]+\\.(com|org|net|edu|gov|it|uk)\\b)",
+#     HASH = "^#",
+#     EMOJI = "[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F700-\U0001F77F\U0001F780-\U0001F7FF\U0001F800-\U0001F8FF\U0001F900-\U0001F9FF\U0001FA00-\U0001FA6F\U0001FA70-\U0001FAFF\U00002702-\U000027B0\U000024C2-\U0001F251]",
+#     IP_ADDRESS = "\\b\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\b",
+#     MENTION = "^@"
+#   )
+#   items <- names(regexList)
+#
+#   resList <- list()
+#   j <- 0
+#
+#   for (i in 1:length(items)) {
+#     item <- items[i]
+#     results <- stringi::stri_detect_regex(x$token, regexList[[item]])
+#     if (sum(results) > 0) {
+#       j <- j + 1
+#       resList[[j]] <- data.frame(doc_id = x$doc_id[results], item = x$token[results], tag = item)
+#       x$upos[results] <- toupper(item)
+#       x$POSSelected[results] <- ifelse(x$upos[results] %in% c("HASH", "MENTION", "EMOJI"), TRUE, FALSE)
+#     }
+#   }
+#
+#   if (length(resList) > 0) {
+#     resList <- dplyr::bind_rows(resList) %>%
+#       dplyr::filter(!is.na(item))
+#   } else {
+#     resList <- tibble::tibble(doc_id = 0, item = NA, tag = "email") %>% dplyr::filter(!is.na(item))
+#   }
+#
+#   # normalize hash and email
+#   x <- x %>%
+#     mutate(
+#       lemma = case_when(
+#         upos %in% c("HASH", "EMAIL") ~ tolower(lemma),
+#         upos == "EMOJI" ~ trimws(lemma),
+#         TRUE ~ lemma
+#       ),
+#       token = case_when(
+#         upos %in% c("HASH", "EMAIL") ~ tolower(token),
+#         upos == "EMOJI" ~ trimws(token),
+#         TRUE ~ token
+#       )
+#     )
+#
+#   if (nrow(resList) > 0) {
+#     resList <- resList %>%
+#       mutate(item = case_when(
+#         tag %in% c("HASH", "EMAIL") ~ tolower(item),
+#         tag == "EMOJI" ~ trimws(item),
+#         TRUE ~ item
+#       ))
+#   }
+#
+#   return(list(resList = resList, x = x))
+# }
+#
+# resetSpecialEntities <- function(x) {
+#   if ("upos_specialentities" %in% names(x)) {
+#     items <- toupper(c("email", "url", "hash", "emoji", "ip_address", "mention"))
+#     x <- x %>%
+#       mutate(upos = ifelse(upos %in% items, upos_specialentities, upos))
+#   } else {
+#     x$upos_specialentities <- x$upos
+#   }
+#   return(x)
+# }
+#
+# summarySpecialEntities <- function(resList, type = "all") {
+#   data.frame(UPOS = toupper(c("email", "url", "hash", "emoji", "ip_address", "mention")), "N. of Items" = rep(0, 6), "N. of Docs" = rep(0, 6))
+#
+#   switch(type,
+#          "all" = {
+#            resList %>%
+#              group_by(tag) %>%
+#              summarise(items = length(unique(item))) %>%
+#              rename(
+#                UPOS = tag,
+#                "Frequency" = items
+#              ) %>%
+#              ungroup() %>%
+#              bind_rows(tibble(
+#                UPOS = toupper(c("email", "url", "hash", "emoji", "ip_address", "mention")),
+#                "Frequency" = rep(0, 6)
+#              )) %>%
+#              group_by(UPOS) %>%
+#              summarize_all(sum)
+#          },
+#          {
+#            label <- toupper(type)
+#            resList %>%
+#              rename(UPOS = tag) %>%
+#              filter(UPOS == label) %>%
+#              count(item) %>%
+#              arrange(desc(n))
+#          }
+#   )
+# }
+
+## Tagging Special Entites ----
+
 TaggingCorpusElements <- function(x) {
   if ("upos_specialentities" %in% names(x)) {
     x <- resetSpecialEntities(x)
@@ -544,7 +936,8 @@ TaggingCorpusElements <- function(x) {
     EMAIL = "(?i)([_+a-z0-9-]+(\\.[_+a-z0-9-]+)*@[a-z0-9-]+(\\.[a-z0-9-]+)*(\\.[a-z]{2,14}))",
     URL = "(?<!@)\\b(https?://[\\w.-]+\\.[a-z]{2,6}(/[\\S]*)?|[\\w.-]+\\.(com|org|net|edu|gov|it|uk)\\b)",
     HASH = "^#",
-    EMOJI = "[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F700-\U0001F77F\U0001F780-\U0001F7FF\U0001F800-\U0001F8FF\U0001F900-\U0001F9FF\U0001FA00-\U0001FA6F\U0001FA70-\U0001FAFF\U00002702-\U000027B0\U000024C2-\U0001F251]",
+    # Regex più preciso per gli emoji - esclude i caratteri CJK
+    EMOJI = "[\U0001F600-\U0001F64F]|[\U0001F300-\U0001F5FF]|[\U0001F680-\U0001F6FF]|[\U0001F1E0-\U0001F1FF]|[\U00002600-\U000026FF]|[\U00002700-\U000027BF]|[\U0001F900-\U0001F9FF]|[\U0001FA70-\U0001FAFF]|[\U00002B00-\U00002BFF]|[\U00003030\U0000303D\U00003297\U00003299]",
     IP_ADDRESS = "\\b\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\b",
     MENTION = "^@"
   )
@@ -640,6 +1033,53 @@ summarySpecialEntities <- function(resList, type = "all") {
   )
 }
 
+## Custom Lists merging
+mergeCustomLists <- function(df, custom_lists, term = "lemma") {
+  if (!is.null(custom_lists)) {
+    switch(term,
+           "lemma" = {
+             df <- df %>%
+               customListsReset() %>%
+               left_join(custom_lists, by = c("lemma" = "lemma")) %>%
+               mutate(
+                 upos.x = ifelse(!is.na(upos.y), toupper(upos.y), upos.x),
+                 POSSelected = ifelse(upos.x %in% c("ADJ", "NOUN", "PROPN", "VERB", "HASH", "EMOJI", "MENTION"), TRUE, FALSE)
+               ) %>%
+               select(-upos.y) %>%
+               rename(upos = upos.x) %>%
+               highlight()
+           },
+           "token" = {
+             df <- df %>%
+               customListsReset() %>%
+               left_join(custom_lists, by = c("token" = "token")) %>%
+               mutate(
+                 upos.x = ifelse(!is.na(upos.y), toupper(upos.y), upos.x),
+                 POSSelected = ifelse(upos.x %in% c("ADJ", "NOUN", "PROPN", "VERB"), TRUE, FALSE)
+               ) %>%
+               select(-upos.y) %>%
+               rename(upos = upos.x) %>%
+               highlight()
+           }
+    )
+  } else {
+    print("RESET")
+    df <- df %>% customListsReset()
+  }
+  return(df)
+}
+
+customListsReset <- function(df) {
+  if ("upos_original_custom" %in% names(df)) {
+    df <- df %>%
+      mutate(upos = upos_original_custom)
+  } else {
+    df <- df %>%
+      mutate(upos_original_custom = upos)
+  }
+
+  return(df)
+}
 
 ## Custom Lists merging
 mergeCustomLists <- function(df, custom_lists, term = "lemma") {
@@ -2532,7 +2972,7 @@ avoidNetOverlaps <- function(w, threshold = 0.10) {
 tallThematicmap <- function(dfTag, term = "lemma", group = "doc_id", n = 100, labelsize = 10, n.labels = 1, opacity = 0.8) {
   net <- network(LemmaSelection(dfTag) %>% filter(docSelected),
                  term = term, group = group,
-                 n = n, minEdges = 100, labelsize = labelsize, opacity = opacity,
+                 n = n, minEdges = "Auto", labelsize = labelsize, opacity = opacity,
                  interLinks = FALSE, normalization = "association",
                  remove.isolated = FALSE, community.repulsion = 0
   )
@@ -4276,6 +4716,117 @@ abstractingDocument <- function(s, n, id) {
   return(results)
 }
 
+### ABSTRACTIVE TEXT SUMMARIZATION: ----
+
+abstractive_summary <- function(values,
+                                input,
+                                id,
+                                nL = 250,
+                                maxTokens = 16384,
+                                api_key = NULL,
+                                model = "2.0-flash",
+                                retry_attempts = 5) {
+
+  # Input validation
+  if (missing(values) || missing(id)) {
+    stop("Both 'values' and 'id' parameters are required")
+  }
+
+  if (!is.data.frame(values$dfTag)) {
+    stop("values$txt must be a data frame")
+  }
+
+  # Validate numeric parameters
+  if (!is.numeric(nL) || nL <= 0) {
+    stop("nL must be a positive number")
+  }
+
+  if (!is.numeric(maxTokens) || maxTokens <= 0) {
+    stop("maxTokens must be a positive number")
+  }
+
+  # Extract document text based on provided ID
+  doc_data <- values$dfTag %>%
+    filter(doc_id == !!id) %>%
+    rebuild_documents()
+
+  # doc_data <- values$txt %>%
+  #   filter(doc_id == !!id)
+
+  # Check if document exists
+  if (nrow(doc_data) == 0) {
+    warning(paste("Document with ID", id, "not found"))
+    return(NA)
+  }
+
+  # Extract text content
+  doc <- doc_data %>%
+    pull(text)
+
+  # Handle case where multiple documents have same ID (take first one)
+  if (length(doc) > 1) {
+    warning(paste("Multiple documents found for ID", id, "- using first occurrence"))
+    doc <- doc[1]
+  }
+
+  # Check for empty or missing text
+  if (is.na(doc) || nchar(trimws(doc)) == 0) {
+    warning(paste("Document", id, "contains no text content"))
+    return(NA)
+  }
+
+  # Estimate token count for the document
+  tryCatch({
+    n_tokens <- estimate_gemini_tokens(doc)
+  }, error = function(e) {
+    warning(paste("Token estimation failed for document", id, ":", e$message))
+    return(NA)
+  })
+
+  # Check if document exceeds token limit
+  if (n_tokens > maxTokens) {
+    return(paste("Document", id, "too long (", n_tokens, "tokens >", maxTokens,
+                 "limit), skipping summarization"))
+  }
+
+  # Construct detailed prompt for summarization
+  prompt <- paste0(
+    "Create a comprehensive abstractive summary of the following text. ",
+    "Requirements:\n",
+    "- Capture all main points and key details\n",
+    "- Maintain clarity and readability\n",
+    "- Preserve important context and nuances\n",
+    "- Target length: approximately ", nL, " words\n",
+    "- Use clear, concise language\n",
+    "- Maintain the original tone when appropriate\n\n",
+    "Text to summarize:\n\n", doc
+  )
+
+  if (!is.null(input$abstractivePrompt)){
+    prompt <- paste(input$abstractivePrompt, prompt, sep = "\n\n")
+  }
+
+  # Handle API key configuration
+  if (is.null(api_key)) {
+    # Try to get from environment variable
+    api_key <- Sys.getenv("GEMINI_API_KEY", unset = NA)
+    if (is.na(api_key)) {
+      stop("API key must be provided either as parameter or GEMINI_API_KEY environment variable")
+    }
+  }
+
+  res <- gemini_ai(
+    image = NULL,
+    prompt = prompt,
+    model = model,
+    type = "text",
+    retry_503 = retry_attempts,
+    api_key = api_key,
+    outputSize = "medium"
+  )
+  return(res)
+}
+
 ### EXCEL REPORT FUNCTIONS ----
 addDataWb <- function(list_df, wb, sheetname, startRow = 1) {
   l <- length(list_df)
@@ -4417,7 +4968,8 @@ dfLabel <- function() {
     "KChoice",
     "ModelEstim",
     "PolarityDetection",
-    "Summarization"
+    "AbstractiveSummarization",
+    "ExtractiveSummarization"
   )
 
   long <- c(
@@ -4435,7 +4987,8 @@ dfLabel <- function() {
     "TM-K choice",
     "TM-Model Estimation",
     "Polarity Detection",
-    "Summarization"
+    "Abstractive Summarization",
+    "Extractive Summarization"
   )
 
   data.frame(short = short, long = long)
@@ -4565,6 +5118,44 @@ resetValues <- function() {
   ### Initial values ----
   values <- list()
   values <- reactiveValues()
+
+  if (inherits(try(pagedown::find_chrome(), silent=T), "try-error")) {
+    Chrome_url <- NULL
+  }else{
+    Chrome_url <- pagedown::find_chrome()
+  }
+
+  #  Sys.setenv (CHROMOTE_CHROME = Chrome_url)
+
+  ## chrome configuration for shinyapps server
+
+  if (identical(Sys.getenv("R_CONFIG_ACTIVE"), "shinyapps")) {
+    chromote::set_default_chromote_object(
+      chromote::Chromote$new(chromote::Chrome$new(
+        args = c("--disable-gpu",
+                 "--no-sandbox",
+                 "--disable-dev-shm-usage", # required bc the target easily crashes
+                 c("--force-color-profile", "srgb"))
+      ))
+    )
+  }
+  ## end configuration
+
+  ## Check if Chrome browser is installed on the computer
+  if(is.null(Chrome_url)){
+    showModal(modalDialog(
+      title = strong("Warning message!"),
+      HTML("Chrome or a Chromium-based browser is not installed on your computer.<br>
+If you do not have either of these browsers installed, TALL will be unable to export graphs.<br>
+To ensure the functionality of Biblioshiny,
+           please download Chrome by <a href='https://www.google.com/chrome/' target='_blank' > <b>clicking here</b></a>."),
+footer = modalButton("Dismiss"),
+easyClose = TRUE
+    ))
+  } else {
+    Sys.setenv (CHROMOTE_CHROME = Chrome_url)
+  }
+  values$Chrome_url <- Chrome_url
   values$biblioshiny <- NULL
   values$resetNeed <- FALSE
   values$normButton <- FALSE
@@ -4604,13 +5195,20 @@ resetValues <- function() {
     values$menu <- -1
   }
 
-  ## gemini api
+  ## gemini api and model
   home <- homeFolder()
-  path_gemini_key <- paste0(file.path(home, "tall"),"/.gemini_key.txt", collapse="")
+  path_gemini_key <- paste0(file.path(home, "tall"),"/.tall_gemini_key.txt", collapse="")
   # check if sub directory exists
   values$geminiAPI <- load_api_key(path_gemini_key)
   values$corpus_description <- NULL
   values$gemini_additional <- NULL
+
+  path_gemini_model <- path_gemini_key <- paste0(file.path(home, "tall"),"/.tall_gemini_model.txt", collapse="")
+  gemini_api_model <- loadGeminiModel(path_gemini_model)
+  values$gemini_api_model <- gemini_api_model[1]
+  values$gemini_output_size <- gemini_api_model[2]
+
+  values$abstractivePrompt <- NULL
 
   return(values)
 }
@@ -4700,27 +5298,6 @@ highlight_segments <- function(tc, n) {
   tc$segments <- segments
   return(tc)
 }
-
-# Define the function
-# highlight_word <- function(input_string, target_word, upos) {
-#   # Check if the target word is valid
-#
-#   if (is.na(target_word) || target_word == "" | upos %in% c("DET","PART","PUNCT","X","SYM","INTJ", "NUM", "NGRAM_MERGED")) {
-#     return(input_string)
-#   }
-#
-#   # Escape special characters in the target word for regex
-#   target_word_escaped <- gsub("([\\.\\^\\$\\*\\+\\?\\(\\)\\[\\]\\{\\}\\|\\\\])", "\\\\\\1", target_word)
-#
-#   # Replace occurrences of the target word with highlighted HTML markup
-#   highlighted_string <- gsub(
-#     paste0("\\b", target_word_escaped, "\\b"), # Match whole words
-#     paste0("<mark><strong>", target_word, "</strong></mark>"),
-#     input_string
-#   )
-#
-#   return(highlighted_string)
-# }
 
 highlight_word <- function(input_string, target_word, upos) {
   # Controllo della validità della parola target
@@ -4897,7 +5474,10 @@ menuList <- function(menu) {
                                menuSubItem("Model Estimation", tabName = "d_tm_estim", icon = icon("chevron-right"))
                       ),
                       menuSubItem("Polarity Detection", tabName = "d_polDet", icon = icon("chevron-right")),
-                      menuSubItem("Summarization", tabName = "d_summarization", icon = icon("chevron-right"))
+                      menuItem("Summarization", tabName ="summarization", icon = icon("chevron-right"),
+                               menuSubItem("Abstractive", tabName = "d_astractive", icon = icon("chevron-right")),
+                               menuSubItem("Extractive", tabName = "d_summarization", icon = icon("chevron-right"))
+                      )
              ),
              menuItem("Report", tabName = "report", icon = icon("list-alt")),
              menuItem("Settings", tabName = "settings", icon = icon("tasks"))
@@ -4957,7 +5537,10 @@ menuList <- function(menu) {
                                menuSubItem("Model Estimation", tabName = "d_tm_estim", icon = icon("chevron-right"))
                       ),
                       menuSubItem("Polarity Detection", tabName = "d_polDet", icon = icon("chevron-right")),
-                      menuSubItem("Summarization", tabName = "d_summarization", icon = icon("chevron-right"))
+                      menuItem("Summarization", tabName ="summarization", icon = icon("chevron-right"),
+                               menuSubItem("Abstractive", tabName = "d_astractive", icon = icon("chevron-right")),
+                               menuSubItem("Extractive", tabName = "d_summarization", icon = icon("chevron-right"))
+                      )
              ),
              menuItem("Report", tabName = "report", icon = icon("list-alt")),
              menuItem("Settings", tabName = "settings", icon = icon("tasks"))

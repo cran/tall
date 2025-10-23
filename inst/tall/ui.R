@@ -5,6 +5,8 @@ source("tallFunctions.R", local = TRUE)
 source("helpContent.R", local = TRUE)
 libraries()
 
+htmltools::findDependencies(selectizeInput("dummy", label = NULL, choices = NULL))
+
 ## Language model list
 languages <- langrepo()
 label_lang <- unique(languages$language_name)
@@ -301,7 +303,6 @@ body <- dashboardBody(
         ))
       )
     ),
-
 
     ### IMPORT ----
 
@@ -1774,6 +1775,19 @@ body <- dashboardBody(
               )
             ),
             tabPanel(
+              "TALL AI",
+              fluidPage(
+                fluidRow(
+                  column(
+                    12,
+                    br(),
+                    shinycssloaders::withSpinner(htmlOutput("OverviewGeminiUI"), caption = HTML("<br><strong>Thinking...</strong>"),
+                                                 image = "ai_small2.gif", color = "#4F7942")
+                  )
+                )
+              )
+            ),
+            tabPanel(
               "Info & References",
               fluidPage(
                 fluidRow(
@@ -1995,8 +2009,8 @@ body <- dashboardBody(
                   column(
                     12,
                     br(),
-                    shinycssloaders::withSpinner(htmlOutput("ContextGeminiUI"),
-                                                 color = getOption("spinner.color", default = "#4F7942"))
+                    shinycssloaders::withSpinner(htmlOutput("ContextGeminiUI"), caption = HTML("<br><strong>Thinking...</strong>"),
+                                                 image = "ai_small2.gif", color = "#4F7942")
                   )
                 )
               )
@@ -2578,8 +2592,8 @@ body <- dashboardBody(
                 fluidRow(
                   column(12,
                          br(),
-                         shinycssloaders::withSpinner(htmlOutput("caGeminiUI"),
-                                                      color = getOption("spinner.color", default = "#4F7942"))
+                         shinycssloaders::withSpinner(htmlOutput("caGeminiUI"), caption = HTML("<br><strong>Thinking...</strong>"),
+                                                      image = "ai_small2.gif", color = "#4F7942")
                   )
                 )
               )
@@ -2748,8 +2762,8 @@ body <- dashboardBody(
                 fluidRow(
                   column(12,
                          br(),
-                         shinycssloaders::withSpinner(htmlOutput("w_networkGeminiUI"),
-                                                      color = getOption("spinner.color", default = "#4F7942"))
+                         shinycssloaders::withSpinner(htmlOutput("w_networkGeminiUI"), caption = HTML("<br><strong>Thinking...</strong>"),
+                                                      image = "ai_small2.gif", color = "#4F7942")
                   )
                 )
               )
@@ -2901,8 +2915,8 @@ body <- dashboardBody(
                 fluidRow(
                   column(12,
                          br(),
-                         shinycssloaders::withSpinner(htmlOutput("w_networkTMGeminiUI"),
-                                                      color = getOption("spinner.color", default = "#4F7942"))
+                         shinycssloaders::withSpinner(htmlOutput("w_networkTMGeminiUI"), caption = HTML("<br><strong>Thinking...</strong>"),
+                                                      image = "ai_small2.gif", color = "#4F7942")
                   )
                 )
               )
@@ -3140,8 +3154,8 @@ body <- dashboardBody(
                 fluidRow(
                   column(12,
                          br(),
-                         shinycssloaders::withSpinner(htmlOutput("w_w2vGeminiUI"),
-                                                      color = getOption("spinner.color", default = "#4F7942"))
+                         shinycssloaders::withSpinner(htmlOutput("w_w2vGeminiUI"), caption = HTML("<br><strong>Thinking...</strong>"),
+                                                      image = "ai_small2.gif", color = "#4F7942")
                   )
                 )
               )
@@ -3640,8 +3654,8 @@ body <- dashboardBody(
               fluidRow(
                 column(12,
                        br(),
-                       shinycssloaders::withSpinner(htmlOutput("d_tm_GeminiUI"),
-                                                    color = getOption("spinner.color", default = "#4F7942"))
+                       shinycssloaders::withSpinner(htmlOutput("d_tm_GeminiUI"), caption = HTML("<br><strong>Thinking...</strong>"),
+                                                    image = "ai_small2.gif", color = "#4F7942")
                 )
               )
             )
@@ -3780,8 +3794,8 @@ body <- dashboardBody(
                 fluidRow(
                   column(12,
                          br(),
-                         shinycssloaders::withSpinner(htmlOutput("d_polDet_GeminiUI"),
-                                                      color = getOption("spinner.color", default = "#4F7942"))
+                         shinycssloaders::withSpinner(htmlOutput("d_polDet_GeminiUI"), caption = HTML("<br><strong>Thinking...</strong>"),
+                                                      image = "ai_small2.gif", color = "#4F7942")
                   )
                 )
               )
@@ -3791,7 +3805,120 @@ body <- dashboardBody(
       )
     ),
 
-    ### Summarization ----
+    ### Abstractive Summarization ----
+
+    tabItem(
+      tabName = "d_astractive",
+      fluidPage(
+        fluidRow(
+          column(
+            11,
+            h3(strong("Abstractive Summarization"), align = "center")
+          ),
+          div(
+            title = t_report,
+            column(
+              1,
+              do.call("actionButton", c(report_bttn, list(
+                inputId = "d_astractiveReport"
+              )))
+            )
+          )
+        ),
+        br(),
+        br(),
+        fluidRow(
+          column(
+            9,
+            tabsetPanel(
+              type = "tabs",
+              tabPanel(
+                "Abstract",
+                  shinycssloaders::withSpinner(uiOutput("summaryData"),
+                                               color = getOption("spinner.color", default = "#4F7942")
+                  )
+              ),
+              tabPanel(
+                "Full Document",
+                shinycssloaders::withSpinner(uiOutput("documentData2"),
+                                             color = getOption("spinner.color", default = "#4F7942")
+                )
+              ),
+              tabPanel(
+                "Info & References",
+                fluidPage(
+                  fluidRow(
+                    column(1),
+                    column(
+                      10,
+                      br(),
+                      HTML(infoTexts$summarization)
+                    ),
+                    column(1)
+                  )
+                )
+              )
+            )
+          ),
+          column(
+            3,
+            div(
+              box(
+                width = 12,
+                div(h3(strong(em("Abstractive Summarization"))), style = "margin-top:-57px"),
+                h5(("TALL generates a coherent and concise summary by interpreting and paraphrasing the main ideas from the original text"),
+                   style = "text-align: left; text-color: #989898"
+                ),
+                tags$hr(),
+                fluidRow(column(
+                  12,
+                  uiOutput("optionsUnitAbstractive"),
+                  uiOutput("optionsAbstractive"),
+                  numericInput("summaryLength",
+                               label = "Summary Length (in words)",
+                               value = 250,
+                               min = 10,
+                               step = 10,
+                               max = 16384
+                  ),
+                  uiOutput("abstractivePromptUI"),
+                )),
+                hr(),
+                div(
+                  fluidRow(
+                    column(
+                      4,
+                      div(
+                        align = "center",
+                        title = t_run,
+                        do.call("actionButton", c(run_bttn, list(
+                          inputId = "d_abstractiveApply"
+                        )))
+                      )
+                    ),
+                    column(
+                      4,
+                      div(
+                        align = "center",
+                        title = t_view,
+                        do.call("actionButton", c(view_bttn, list(
+                          inputId = "d_abstractiveView"
+                        )))
+                      )
+                    ),
+                    column(4)
+                  ),
+                  style = "margin-top:-15px"
+                )
+              ),
+              style = "margin-top:40px"
+            )
+          )
+        )
+      )
+    ),
+
+    ### Extractive Summarization ----
 
     tabItem(
       tabName = "d_summarization",
@@ -3799,7 +3926,7 @@ body <- dashboardBody(
         fluidRow(
           column(
             11,
-            h3(strong("Summarization"), align = "center")
+            h3(strong("Extractive Summarization"), align = "center")
           ),
           div(
             title = t_report,
@@ -4010,43 +4137,38 @@ body <- dashboardBody(
             inputId = "cache",
             style = "color:white;",
             label = "Clean model folder"
-          ),
-          hr(),
-          h3("TALL AI Api Key"),
-          h4("Set a valid API Key to use TALL AI features powered by Google Gemini."),
-          h5(HTML(
-            'If you don’t have one yet, you can generate it by logging into <a href="https://aistudio.google.com/app/apikey" target="_blank">https://aistudio.google.com/app/apikey</a> with your Google account and creating a new API Key.'
-          )),
-          br(),
-          passwordInput("api_key", "Enter your Gemini API Key:", ""),
-          actionButton("set_key", "Set API Key",style = "color:white;",),
-          br(),
-          uiOutput("apiStatus"),
-          #textOutput("status", )
-
-          # sliderTextInput(
-          #   inputId = "dpi",
-          #   label = "Please select the desired DPI",
-          #   grid = TRUE,
-          #   force_edges = TRUE,
-          #   choices = c("75", "150", "300", "600"),
-          #   width = "70%",
-          #   selected = "300"
-          # ),
-          # br(),
-          # sliderTextInput(
-          #   inputId = "h",
-          #   label = "Please select the desired heigth in inches",
-          #   grid = TRUE,
-          #   force_edges = TRUE,
-          #   width = "70%",
-          #   choices = seq(5,15),
-          #   selected = "7"
-          # )
-        ), column(
+          )), column(
           6
           ### To insert settings for default path, etc.
-        ))
+        )),
+        hr(),
+        h3("'Tall AI' Api Key"),
+        h4("Set a valid API Key to use 'Tall AI' features powered by Google Gemini."),
+        h5(HTML(
+          'If you don’t have one yet, you can generate it by logging into <a href="https://aistudio.google.com/app/apikey" target="_blank">AI Studio</a> with your Google account and creating a new API Key.'
+        )),
+        br(),
+        fluidRow(
+          column(4,
+                 passwordInput("api_key", "Enter your Gemini API Key:", "", width = "100%"),
+                 uiOutput("apiStatus"),
+                 br(),
+                 fluidRow(
+                   column(6,
+                          actionButton("set_key", "Set API Key",style = "color:white;", width = "90%")
+                   ),
+                   column(6,
+                          actionButton("remove_key", "Remove API Key",style = "color:white;",width = "90%")
+                   )
+                 )),
+          column(1),
+          column(3,
+                 uiOutput("geminiModelChoice")#, style = "color: red; font-weight: bold;")
+          ),
+          column(2,
+                 uiOutput("geminiOutputSize")
+          )
+        )
       )
     )
   )
