@@ -1,6 +1,6 @@
 Package: tall
 Title: Text Analysis for All
-Version: 0.5.0
+Version: 0.5.1
 Authors@R: c(
     person(given = "Massimo", 
            family = "Aria",
@@ -49,7 +49,7 @@ Imports: base64enc, ca, chromote, curl (>= 6.3.0), doParallel, dplyr
 LazyData: true
 LinkingTo: Rcpp
 NeedsCompilation: yes
-Packaged: 2025-12-06 16:30:20 UTC; massimoaria
+Packaged: 2025-12-11 18:13:35 UTC; massimoaria
 Author: Massimo Aria [aut, cre, cph] (0000-0002-8517-9411),
   Maria Spano [aut] (ORCID: <https://orcid.org/0000-0002-3103-2342>),
   Luca D'Aniello [aut] (ORCID: <https://orcid.org/0000-0003-1019-9212>),
@@ -59,4 +59,4 @@ Author: Massimo Aria [aut, cre, cph] (0000-0002-8517-9411),
     <https://orcid.org/0000-0002-8794-966X>)
 Maintainer: Massimo Aria <aria@unina.it>
 Repository: CRAN
-Date/Publication: 2025-12-06 17:30:02 UTC
+Date/Publication: 2025-12-12 09:10:02 UTC
